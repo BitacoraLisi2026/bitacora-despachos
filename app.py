@@ -6,44 +6,39 @@ from datetime import datetime
 # Nombre del archivo de Excel
 EXCEL_FILE = "bitacora_despachos.xlsx"
 
-# --- SISTEMA ULTRA-SEGURO PARA CARGAR LISTAS ---
-def cargar_lista_segura(nombre_archivo, mensaje_inicial, lista_respaldo):
-    lista = [mensaje_inicial]
-    try:
-        if os.path.exists(nombre_archivo):
-            with open(nombre_archivo, "r", encoding="utf-8") as f:
-                lineas = [linea.strip() for linea in f.readlines() if linea.strip()]
-                if lineas:
-                    lista.extend(lineas)
-                    return lista
-    except Exception:
-        pass # Si hay error, ignora y usa el respaldo para no romper la app
-    
-    lista.extend(lista_respaldo)
-    return lista
+# ==============================================================
+# 📋 CONFIGURA AQUÍ TUS DATOS REALES (Escríbelos dentro de las comillas)
+# ==============================================================
+LISTA_CLIENTES = [
+    "Selecciona un cliente...", 
+    "Cliente Ejemplo 1", 
+    "Cliente Ejemplo 2", 
+    "Cliente Ejemplo 3"
+]
 
-# Listas de respaldo por si GitHub no lee los archivos TXT temporalmente
-RESPALDO_CLIENTES = ["Cliente General 1", "Cliente General 2", "Otro Cliente"]
-RESPALDO_RECEPCION = ["Personal de Turno 1", "Personal de Turno 2"]
+LISTA_RECEPCION = [
+    "Selecciona quién recibe...", 
+    "Persona Ejemplo 1", 
+    "Persona Ejemplo 2"
+]
+# ==============================================================
 
-# Cargar listas de forma segura
-LISTA_CLIENTES = cargar_lista_segura("clientes.txt", "Selecciona un cliente...", RESPALDO_CLIENTES)
-LISTA_RECEPCION = cargar_lista_segura("receptores.txt", "Selecciona quién recibe...", RESPALDO_RECEPCION)
-# --------------------------------------------------------------
-
-# Configuración de la página
+# Configuración elegante de la página
 st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
 
-# Mostrar logo si existe en el repositorio
-if os.path.exists("logo.png"):
-    st.image("logo.png", width=180)
-elif os.path.exists("logo.jpg"):
-    st.image("logo.jpg", width=180)
+# 🎨 Bloque del Logo: Busca tu imagen sin bloquear la app
+try:
+    if os.path.exists("logo.png"):
+        st.image("logo.png", width=180)
+    elif os.path.exists("logo.jpg"):
+        st.image("logo.jpg", width=180)
+except Exception:
+    pass  # Si el logo falla por formato, no rompe la aplicación
 
 st.title("🚚 Registro de Bitácora de Despachos")
 st.write("Introduce los datos del despacho para registrarlos en el archivo de Excel.")
 
-# Formulario de entrada de datos
+# Formulario elegante de entrada de datos
 with st.form(key="formulario_bitacora", clear_on_submit=True):
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -79,7 +74,7 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     
     boton_guardar = st.form_submit_button(label="💾 Registrar Despacho")
 
-# Lógica para guardar en Excel
+# Lógica robusta para guardar en Excel
 if boton_guardar:
     lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
     
@@ -115,25 +110,32 @@ if boton_guardar:
         
         df_nuevos = pd.DataFrame(nuevos_registros)
         
-        if os.path.exists(EXCEL_FILE):
-            df_existente = pd.read_excel(EXCEL_FILE)
-            df_final = pd.concat([df_existente, df_nuevos], ignore_index=True)
-        else:
-            df_final = df_nuevos
-            
-        df_final.to_excel(EXCEL_FILE, index=False)
-        st.success(f"✅ ¡Se registraron exitosamente {len(lista_documentos)} documentos para este viaje!")
+        try:
+            if os.path.exists(EXCEL_FILE):
+                df_existente = pd.read_excel(EXCEL_FILE)
+                df_final = pd.concat([df_existente, df_nuevos], ignore_index=True)
+            else:
+                df_final = df_nuevos
+                
+            df_final.to_excel(EXCEL_FILE, index=False)
+            st.success(f"✅ ¡Se registraron exitosamente {len(lista_documentos)} documentos para este viaje!")
+        except Exception as e:
+            st.error(f"❌ Error al guardar en Excel: {e}. Inténtalo de nuevo.")
 
-# Mostrar tabla y botón de descarga (Puestos afuera para garantizar que siempre aparezcan)
-if os.path.exists(EXCEL_FILE):
-    st.subheader("📋 Últimos despachos registrados")
-    df_mostrar = pd.read_excel(EXCEL_FILE)
-    st.dataframe(df_mostrar.tail(10))
-    
-    with open(EXCEL_FILE, "rb") as f:
-        st.download_button(
-            label="📥 Descargar Bitácora en Excel",
-            data=f,
-            file_name="bitacora_despachos.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+# 📥 Bloque de visualización y descarga (Protegido contra caídas)
+try:
+    if os.path.exists(EXCEL_FILE):
+        st.markdown("---")
+        st.subheader("📋 Últimos despachos registrados")
+        df_mostrar = pd.read_excel(EXCEL_FILE)
+        st.dataframe(df_mostrar.tail(10))
+        
+        with open(EXCEL_FILE, "rb") as f:
+            st.download_button(
+                label="📥 Descargar Bitácora en Excel",
+                data=f,
+                file_name="bitacora_despachos.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+except Exception:
+    pass
