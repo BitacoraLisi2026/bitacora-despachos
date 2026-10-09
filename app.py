@@ -35,15 +35,22 @@ LISTA_RECEPCION = [
 # ==============================================================
 LISTA_CLIENTES = [
     "Selecciona un cliente...", 
-    "Cliente Real 1", 
-    "Cliente Real 2", 
-    "Cliente Real 3"
+    "VIÑEDOS DE AGUIRRE",
+    "VIÑA CASADONOSO",
+    "VIÑA AROMO",
+    "VIÑA CASA SOLIS",
+    "VIÑA CONCHA Y TORO",
+    "VIÑA LUIS FELIPE EDWARDS",
+    "TRANSPORTES COLCHAGUA"
 ]
 
 LISTA_RECEIPCION = [
     "Selecciona quién recibe...", 
-    "Persona Real 1", 
-    "Persona Real 2"
+    "Camila Villasana",
+    "Olga Gonzalez",
+    "Jorge Diaz",
+    "Encargado Colchagua"
+    "Javiera Ramirez"
 ]
 # ==============================================================
 
