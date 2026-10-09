@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Nombre del archivo de Excel
 EXCEL_FILE = "bitacora_despachos.xlsx"
@@ -11,6 +11,7 @@ EXCEL_FILE = "bitacora_despachos.xlsx"
 # ==============================================================
 LISTA_CLIENTES = [
     "Selecciona un cliente...", 
+    "TRANSPORTES COLCHAGUA",  # <- El cliente clave para la automatización
     "VIÑEDOS DE AGUIRRE",
     "VIÑA CASADONOSO",
     "VIÑA AROMO",
@@ -25,24 +26,24 @@ LISTA_RECEIPCION = [
     "Camila Villasana",
     "Olga Gonzalez",
     "Jorge Diaz",
-    "Encargado Colchagua",
-    "Javiera Ramirez"
+    "Colchagua"
 ]
 # ==============================================================
 
 # Configuración elegante de la página
 st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
 
-# --- DETECTAR HORA LOCAL DEL USUARIO ---
+# --- AJUSTE DE HORA LOCAL (ZONA HORARIA DE CHILE) ---
 try:
-    offset_minutos = st.context.timezone_offset
-    hora_local_dt = datetime.utcnow() - timedelta(minutes=offset_minutos)
+    import zoneinfo
+    zona_horaria = zoneinfo.ZoneInfo("America/Santiago") 
+    hora_local_dt = datetime.now(zona_horaria)
 except Exception:
     hora_local_dt = datetime.now()
 
 fecha_actual = hora_local_dt.date()
 hora_actual = hora_local_dt.time()
-# --------------------------------------
+# --------------------------------------------------------------
 
 # 🎨 Bloque del Logo: Busca tu imagen sin bloquear la app
 try:
@@ -53,30 +54,39 @@ try:
 except Exception:
     pass
 
-st.markdown("### 🚚 Bitácora de Despachos")
-st.write("Vamos que se puede, ingresa todos los datos.")
+st.markdown("<h2 style='font-size: 30px; margin-bottom: 0px;'>🚚 Registro de Bitácora de Despachos</h2>", unsafe_allow_html=True)
+st.write("Introduce los datos del despacho para registrarlos en el archivo de Excel.")
 
 # Formulario elegante de entrada de datos
 with st.form(key="formulario_bitacora", clear_on_submit=True):
     col1, col2, col3 = st.columns(3)
     with col1:
-        fecha = st.date_input("Fecha", value=datetime.today())
+        fecha = st.date_input("Fecha", value=fecha_actual)
     with col2:
-       # hora_despacho = st.time_input("Hora de Despacho") 
         hora_despacho = st.time_input("Hora de Despacho", value=hora_actual)
     with col3:
-        hora_llegada = st.time_input("Hora de Llegada")
+        hora_llegada = st.time_input("Hora de Llegada", value=hora_actual)
         
     st.markdown("---")
     
     col4, col5 = st.columns(2)
-    with col4:
-        conductor = st.text_input("Conductor / Empresa de Transporte", value="Elizabeth Utrera")
-        orden_trabajo = st.text_input("Orden de Trabajo")
-        
     with col5:
+        # Ponemos el cliente arriba para que la lógica de abajo reaccione a él
         cliente = st.selectbox("Cliente (Remitente)", options=LISTA_CLIENTES)
         facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
+
+    # REGLA INTELIGENTE: Si seleccionan Transportes Colchagua, se activa el modo externo
+    es_colchagua = (cliente == "TRANSPORTES COLCHAGUA")
+
+    with col4:
+        if es_colchagua:
+            conductor = st.text_input("Conductor / Empresa de Transporte", value="TRANSPORTES COLCHAGUA (Externo)")
+            destino = st.text_input("¿Para dónde lo lleva? (Destino Obligatorio)", value="")
+        else:
+            conductor = st.text_input("Conductor / Empresa de Transporte", value="Elizabeth Utrera")
+            destino = "Entrega Directa"
+            
+        orden_trabajo = st.text_input("Orden de Trabajo")
         
     st.markdown("---")
     col6, col7 = st.columns(2)
@@ -90,12 +100,16 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     st.markdown("---")
     st.subheader("📊 Control de Kilometraje")
     
-    # ELIMINADO: Se quitó la línea del mensaje informativo st.info()
-    col8, col9 = st.columns(2)
-    with col8:
-        km_inicial = st.number_input("Kilómetros Iniciales", min_value=0.0, step=1.0, format="%.1f")
-    with col9:
-        km_final = st.number_input("Kilómetros Finales", min_value=0.0, step=1.0, format="%.1f")
+    if es_colchagua:
+        st.info("ℹ️ Transportes Colchagua seleccionado: El kilometraje se registrará automáticamente en 0.0")
+        km_inicial = 0.0
+        km_final = 0.0
+    else:
+        col8, col9 = st.columns(2)
+        with col8:
+            km_inicial = st.number_input("Kilómetros Iniciales", min_value=0.0, step=1.0, format="%.1f")
+        with col9:
+            km_final = st.number_input("Kilómetros Finales", min_value=0.0, step=1.0, format="%.1f")
     
     boton_guardar = st.form_submit_button(label="💾 Registrar Despacho")
 
@@ -109,13 +123,15 @@ if boton_guardar:
         st.error("⚠️ Por favor, ingresa al menos una Factura o Guía.")
     elif recepcionado_por == "Selecciona quién recibe...":
         st.error("⚠️ Por favor, selecciona la persona que Recepcionó de la lista.")
-    elif km_final < km_inicial:
+    elif not es_colchagua and km_final < km_inicial:
         st.error("⚠️ Error: Los Kilómetros Finales no pueden ser menores que los Kilómetros Iniciales.")
+    elif es_colchagua and not destino.strip():
+        st.error("⚠️ Por favor, indica para dónde lo lleva (Destino).")
     elif not conductor:
         st.error("⚠️ Por favor, indica el nombre del Conductor o de la Empresa de Transporte.")
     else:
-        km_recorridos = km_final - km_inicial
-        nuevos_registros = []
+        km_recorridos = km_final - km_inicial if not es_colchagua else 0.0
+        nuevos_registros =
         
         for doc in lista_documentos:
             registro = {
@@ -131,7 +147,9 @@ if boton_guardar:
                 "RECEPCIONADO POR": recepcionado_por,
                 "KM INICIAL": km_inicial,
                 "KM FINAL": km_final,
-                "KM RECORRIDOS": km_recorridos
+                "KM RECORRIDOS": km_recorridos,
+                "TIPO TRANSPORTE": "EXTERNO" if es_colchagua else "INTERNO",
+                "DESTINO": destino
             }
             nuevos_registros.append(registro)
         
