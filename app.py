@@ -92,7 +92,7 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
         facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
 
     # Detección inteligente del tipo de viaje
-    es_interno = (conductor == "Elizabeth - Colchagua")
+    es_interno = (conductor == "Elizabeth")
     # Es externo si seleccionó cualquier transporte que NO sea el de Elizabeth ni el mensaje inicial
     es_externo = (conductor != "Selecciona el conductor o transporte..." and not es_interno)
         
