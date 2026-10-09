@@ -36,6 +36,7 @@ LISTA_TRANSPORTES = [
     "STARKEN",
     "FEDDEX",
     "BLUEEXPRESS",
+    "TRANSPORTES COLCHAGUA"
     "Otro (Especificar en Orden de Trabajo)"
 ]
 # ==============================================================
