@@ -9,7 +9,6 @@ EXCEL_FILE = "bitacora_despachos.xlsx"
 # --- CONFIGURA AQUÍ TUS LISTAS DESPLEGABLES ---
 LISTA_CLIENTES = [
     "Selecciona un cliente...", 
-    " "Selecciona un cliente...", 
     "VIÑA CASADONOSO", 
     "VIÑEDOS DE AGUIRRE", 
     "VIÑA LOS AROMOS",
