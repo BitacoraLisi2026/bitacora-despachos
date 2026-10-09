@@ -9,28 +9,28 @@ EXCEL_FILE = "bitacora_despachos.xlsx"
 # ==============================================================
 # 📋 CONFIGURA AQUÍ TUS DATOS REALES (Escríbelos dentro de las comillas)
 # ==============================================================
-LISTA_CLIENTES = [
+LISTA_CLIENTES_INTERNOS = [
     "Selecciona un cliente...", 
-    "DESPACHO EXTERNO",           # <- Opción clave que activa el modo externo
+    "DESPACHO EXTERNO",           # <- Opción que activa el modo externo
     "VIÑEDOS DE AGUIRRE",
-    "VIÑA CASADONOSO",
-    "VIÑA AROMO",
-    "VIÑA CASA SOLIS",
-    "VIÑA CONCHA Y TORO",
-    "VIÑA LUIS FELIPE EDWARDS",
-    "TRANSPORTES COLCHAGUA"
+"VIÑA CASADONOSO",
+"VIÑA AROMO",
+"VIÑA CASA SOLIS",
+"VIÑA CONCHA Y TORO",
+"VIÑA LUIS FELIPE EDWARDS",
+"TRANSPORTES COLCHAGUA"
 ]
 
 LISTA_RECEIPCION = [
     "Selecciona quién recibe...", 
     "Camila Villasana",
-    "Olga Gonzalez",
-    "Jorge Diaz",
-    "Encargado Colchagua",
-    "Javiera Ramirez"
+"Olga Gonzalez",
+"Jorge Diaz",
+"Encargado Colchagua",
+"Javiera Ramirez"
 ]
 
-# Agrega o quita aquí tus empresas de transporte externo habituales
+# Configura aquí tus empresas de transporte externo habituales
 LISTA_TRANSPORTES_EXTERNOS = [
     "Selecciona la empresa de transporte...",
     "Chilexpress",
@@ -67,7 +67,7 @@ except Exception:
     pass
 
 st.markdown("<h2 style='font-size: 30px; margin-bottom: 0px;'>🚚 Bitácora de Despachos</h2>", unsafe_allow_html=True)
-st.write("Vamos que se puede, ingresa todos los datos.")
+st.write("Introduce los datos del despacho para registrarlos en el archivo de Excel.")
 
 # Formulario elegante de entrada de datos
 with st.form(key="formulario_bitacora", clear_on_submit=True):
@@ -83,22 +83,28 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     
     col4, col5 = st.columns(2)
     with col5:
-        cliente = st.selectbox("Cliente (Remitente)", options=LISTA_CLIENTES)
-        facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
+        # Menú inicial de selección de cliente o despacho externo
+        seleccion_cliente = st.selectbox("Cliente / Tipo de Despacho", options=LISTA_CLIENTES_INTERNOS)
+        
+        # Detección automática si es un despacho externo
+        es_viaje_externo = (seleccion_cliente == "DESPACHO EXTERNO")
+        
+        if es_viaje_externo:
+            # Si es externo, te pregunta el nombre del cliente real en texto libre (que será el mismo destino)
+            cliente_final = st.text_input("¿A qué Cliente se envía? (Destino)", value="")
+        else:
+            cliente_final = seleccion_cliente
 
-    # Detección automática si es un despacho externo
-    es_viaje_externo = (cliente == "DESPACHO EXTERNO")
+        facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
 
     with col4:
         if es_viaje_externo:
-            # Si seleccionan Despacho Externo, se abre la lista de tus transportistas
+            # Se abre el listado de tus transportistas
             conductor = st.selectbox("Selecciona la Empresa Externa", options=LISTA_TRANSPORTES_EXTERNOS)
-            destino = st.text_input("¿Para dónde lo lleva? (Destino)", value="")
             nro_flete = st.text_input("Nº de Flete / Orden de Seguimiento", value="")
         else:
             # Si eligen un cliente normal, va Elizabeth Utrera por defecto
             conductor = st.text_input("Conductora", value="Elizabeth Utrera")
-            destino = "Entrega Directa"
             nro_flete = "N/A"
             
         orden_trabajo = st.text_input("Orden de Trabajo")
@@ -132,8 +138,10 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
 if boton_guardar:
     lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
     
-    if cliente == "Selecciona un cliente...":
+    if seleccion_cliente == "Selecciona un cliente...":
         st.error("⚠️ Por favor, selecciona un Cliente o el Tipo de Despacho válido.")
+    elif es_viaje_externo and not cliente_final.strip():
+        st.error("⚠️ Por favor, escribe el nombre del Cliente al que va destinado el flete.")
     elif es_viaje_externo and conductor == "Selecciona la empresa de transporte...":
         st.error("⚠️ Por favor, selecciona la Empresa Externa que realizará el traslado.")
     elif len(lista_documentos) == 0:
@@ -142,8 +150,6 @@ if boton_guardar:
         st.error("⚠️ Por favor, selecciona la persona que Recepcionó de la lista.")
     elif not es_viaje_externo and km_final < km_inicial:
         st.error("⚠️ Error: Los Kilómetros Finales no pueden ser menores que los Kilómetros Iniciales.")
-    elif es_viaje_externo and not destino.strip():
-        st.error("⚠️ Por favor, indica para dónde lo lleva (Destino).")
     elif es_viaje_externo and not nro_flete.strip():
         st.error("⚠️ Por favor, indica el Número de Flete o Seguimiento.")
     else:
@@ -157,7 +163,7 @@ if boton_guardar:
                 "HORA DE LLEGADA": hora_llegada.strftime("%H:%M"),
                 "CONDUCTOR / EMPRESA": conductor, 
                 "ORDEN DE TRABAJO": orden_trabajo,
-                "CLIENTE": cliente if not es_viaje_externo else "CLIENTE EXTERNO TERCERIZADO",
+                "CLIENTE": cliente_final,            # <- Guarda el cliente real ingresado por texto
                 "CANTIDAD DE ETIQUETAS": cant_etiquetas,
                 "CANTIDAD DE CAJAS": cant_cajas,
                 "FACTURA O GUIA": doc,
@@ -166,7 +172,7 @@ if boton_guardar:
                 "KM FINAL": km_final,
                 "KM RECORRIDOS": km_recorridos,
                 "TIPO TRANSPORTE": "EXTERNO" if es_viaje_externo else "INTERNO",
-                "DESTINO": destino,
+                "DESTINO": cliente_final,            # <- Se duplica automáticamente como el Destino
                 "NRO FLETE / SEGUIMIENTO": nro_flete
             }
             nuevos_registros.append(registro)
