@@ -42,7 +42,7 @@ try:
 except Exception:
     pass
 
-st.markdown("### 🚚 Registro de Bitácora de Despachos")
+st.markdown("### 🚚Bitácora de Despachos")
 st.write("Vamos que se puede, ingresa todos los datos.")
 
 # Formulario elegante de entrada de datos
