@@ -62,7 +62,8 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     with col1:
         fecha = st.date_input("Fecha", value=datetime.today())
     with col2:
-        hora_despacho = st.time_input("Hora de Despacho")
+       # hora_despacho = st.time_input("Hora de Despacho") 
+        hora_despacho = st.time_input("Hora de Despacho", value=hora_actual)
     with col3:
         hora_llegada = st.time_input("Hora de Llegada")
         
