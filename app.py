@@ -11,15 +11,22 @@ EXCEL_FILE = "bitacora_despachos.xlsx"
 # ==============================================================
 LISTA_CLIENTES = [
     "Selecciona un cliente...", 
-    "Cliente Ejemplo 1", 
-    "Cliente Ejemplo 2", 
-    "Cliente Ejemplo 3"
+    "VIÑEDOS DE AGUIRRE",
+    "VIÑA CASADONOSO",
+    "VIÑA AROMO",
+    "VIÑA CASA SOLIS",
+    "VIÑA CONCHA Y TORO",
+    "VIÑA LUIS FELIPE EDWARDS",
+    "TRANSPORTES COLCHAGUA"
+
 ]
 
 LISTA_RECEPCION = [
     "Selecciona quién recibe...", 
-    "Persona Ejemplo 1", 
-    "Persona Ejemplo 2"
+    "Camila Villasana"
+    "Olga Gonzalez"
+    "Jorge Diaz"
+    "Colchagua"
 ]
 # ==============================================================
 
