@@ -9,22 +9,18 @@ EXCEL_FILE = "bitacora_despachos.xlsx"
 # --- CONFIGURA AQUÍ TUS LISTAS DESPLEGABLES ---
 LISTA_CLIENTES = [
     "Selecciona un cliente...", 
-    "VIÑA CASADONOSO", 
-    "VIÑEDOS DE AGUIRRE", 
-    "VIÑA LOS AROMOS",
-    "VIÑA SOLIS",
-    "VIÑA TOP WINE"
-    
+    "Cliente A - Logística Express", 
+    "Cliente B - Distribuidora Central", 
+    "Cliente C - Almacenes Unidos",
+    "Otro Cliente"
 ]
 
 LISTA_RECEPCION = [
     "Selecciona quién recibe...", 
-    "Camila Villasana", 
+    "Juan Pérez", 
     "María López", 
     "Carlos Rodríguez", 
-    "Ana Martínez",
-    "Olga Gonzalez",
-    "Jorge Diaz"
+    "Ana Martínez"
 ]
 # ----------------------------------------------
 
@@ -47,13 +43,12 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     # Campos de texto y desplegables principales
     col4, col5 = st.columns(2)
     with col4:
-        # Campo Conductor fijo con el nombre solicitado
-        conductor = st.text_input("Conductora", value="Elizabeth Utrera", disabled=False)
+        conductor = st.text_input("Conductora", value="Elizabeth Utrera")
         orden_trabajo = st.text_input("Orden de Trabajo")
     with col5:
-        # Menú desplegable para Cliente
         cliente = st.selectbox("Cliente", options=LISTA_CLIENTES)
-        factura_guia = st.text_input("Factura o Guía")
+        # CAMBIO CLAVE: Área de texto para ingresar múltiples documentos (uno por línea)
+        facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
         
     # Campos numéricos de carga
     col6, col7 = st.columns(2)
@@ -67,7 +62,6 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     
     st.markdown("---")
     st.subheader("📊 Control de Kilometraje")
-    # Campos numéricos de kilometraje
     col8, col9 = st.columns(2)
     with col8:
         km_inicial = st.number_input("Kilómetros Iniciales", min_value=0.0, step=1.0, format="%.1f")
@@ -79,56 +73,61 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
 
 # Lógica para guardar en Excel al hacer clic
 if boton_guardar:
-    # Validaciones obligatorias para los desplegables y kilómetros
+    # Procesar la lista de facturas/guías eliminando espacios y líneas vacías
+    lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
+    
+    # Validaciones obligatorias
     if cliente == "Selecciona un cliente...":
         st.error("⚠️ Por favor, selecciona un Cliente válido de la lista.")
+    elif len(lista_documentos) == 0:
+        st.error("⚠️ Por favor, ingresa al menos una Factura o Guía.")
     elif recepcionado_por == "Selecciona quién recibe...":
         st.error("⚠️ Por favor, selecciona la persona que Recepcionó de la lista.")
     elif km_final < km_inicial:
         st.error("⚠️ Error: Los Kilómetros Finales no pueden ser menores que los Kilómetros Iniciales.")
     else:
-        # Calcular automáticamente los kilómetros recorridos en el viaje
         km_recorridos = km_final - km_inicial
+        nuevos_registros = []
         
-        # Formatear los datos en un diccionario
-        nuevo_registro = {
-            "FECHA": fecha.strftime("%Y-%m-%d"),
-            "HORA DE DESPACHO": hora_despacho.strftime("%H:%M"),
-            "HORA DE LLEGADA": hora_llegada.strftime("%H:%M"),
-            "CONDUCTOR": conductor,
-            "ORDEN DE TRABAJO": orden_trabajo,
-            "CLIENTE": cliente,
-            "CANTIDAD DE ETIQUETAS": cant_etiquetas,
-            "CANTIDAD DE CAJAS": cant_cajas,
-            "FACTURA O GUIA": factura_guia,
-            "RECEPCIONADO POR": recepcionado_por,
-            "KM INICIAL": km_inicial,
-            "KM FINAL": km_final,
-            "KM RECORRIDOS": km_recorridos
-        }
+        # Crear una fila en el Excel por cada documento ingresado
+        for doc in lista_documentos:
+            registro = {
+                "FECHA": fecha.strftime("%Y-%m-%d"),
+                "HORA DE DESPACHO": hora_despacho.strftime("%H:%M"),
+                "HORA DE LLEGADA": hora_llegada.strftime("%H:%M"),
+                "CONDUCTOR": conductor,
+                "ORDEN DE TRABAJO": orden_trabajo,
+                "CLIENTE": cliente,
+                "CANTIDAD DE ETIQUETAS": cant_etiquetas,
+                "CANTIDAD DE CAJAS": cant_cajas,
+                "FACTURA O GUIA": doc,  # Aquí se asigna cada documento por separado
+                "RECEPCIONADO POR": recepcionado_por,
+                "KM INICIAL": km_inicial,
+                "KM FINAL": km_final,
+                "KM RECORRIDOS": km_recorridos
+            }
+            nuevos_registros.append(registro)
         
-        # Crear DataFrame con el nuevo registro
-        df_nuevo = pd.DataFrame([nuevo_registro])
+        # Crear DataFrame con los nuevos registros
+        df_nuevos = pd.DataFrame(nuevos_registros)
         
-        # Si el archivo ya existe, cargar datos previos y añadir el nuevo
+        # Cargar datos existentes y concatenar
         if os.path.exists(EXCEL_FILE):
             df_existente = pd.read_excel(EXCEL_FILE)
-            df_final = pd.concat([df_existente, df_nuevo], ignore_index=True)
+            df_final = pd.concat([df_existente, df_nuevos], ignore_index=True)
         else:
-            df_final = df_nuevo
+            df_final = df_nuevos
             
-        # Guardar de vuelta al archivo de Excel
+        # Guardar en Excel
         df_final.to_excel(EXCEL_FILE, index=False)
-        st.success(f"✅ ¡Registro guardado con éxito! Kilómetros recorridos: {km_recorridos:.1f} km")
+        st.success(f"✅ ¡Se registraron exitosamente {len(lista_documentos)} documentos para este viaje!")
 
-# Mostrar los últimos registros en la app
+# Mostrar los últimos registros en la app y botón de descarga
 if os.path.exists(EXCEL_FILE):
     st.subheader("📋 Últimos despachos registrados")
     df_mostrar = pd.read_excel(EXCEL_FILE)
-    st.dataframe(df_mostrar.tail(5))
-
-# Botón web para descargar el archivo Excel directamente
-if os.path.exists(EXCEL_FILE):
+    st.dataframe(df_mostrar.tail(10))
+    
     with open(EXCEL_FILE, "rb") as f:
         st.download_button(
             label="📥 Descargar Bitácora en Excel",
