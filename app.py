@@ -17,7 +17,8 @@ LISTA_CLIENTES = [
     "VIÑA CASA SOLIS",
     "VIÑA CONCHA Y TORO",
     "VIÑA LUIS FELIPE EDWARDS",
-    "TRANSPORTES COLCHAGUA"
+    "TRANSPORTES COLCHAGUA",
+    "VIÑA TOP WINE"
 
 ]
 
@@ -26,7 +27,7 @@ LISTA_RECEPCION = [
     "Camila Villasana",
     "Olga Gonzalez",
     "Jorge Diaz",
-    "Colchagua"
+    "Encargado Colchagua"
 ]
 # ==============================================================
 
