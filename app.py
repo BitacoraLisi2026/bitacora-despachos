@@ -11,7 +11,7 @@ EXCEL_FILE = "bitacora_despachos.xlsx"
 # ==============================================================
 LISTA_CLIENTES = [
     "Selecciona un cliente...", 
-   "VIÑEDOS DE AGUIRRE",
+    "VIÑEDOS DE AGUIRRE",
     "VIÑA CASADONOSO",
     "VIÑA AROMO",
     "VIÑA CASA SOLIS",
@@ -59,10 +59,8 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     
     col4, col5 = st.columns(2)
     with col4:
-        # Se queda como texto libre; aparece Elizabeth por defecto pero se puede borrar
         conductor = st.text_input("Conductor / Empresa de Transporte", value="Elizabeth Utrera")
         orden_trabajo = st.text_input("Orden de Trabajo")
-        destinatario_final = st.text_input("Destinatario Final (Para quién va)", value="")
         
     with col5:
         cliente = st.selectbox("Cliente (Remitente)", options=LISTA_CLIENTES)
@@ -75,11 +73,11 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     with col7:
         cant_cajas = st.number_input("Cantidad de Cajas", min_value=0, step=1)
         
-    recepcionado_por = st.selectbox("Recepcionado Por", options=LISTA_RECEPCION)
+    recepcionado_por = st.selectbox("Recepcionado Por", options=LISTA_RECEIPCION)
     
     st.markdown("---")
     st.subheader("📊 Control de Kilometraje")
-    # st.info("ℹ️ Si el despacho es por transporte externo y no aplica kilometraje, puedes dejar estos campos en 0.")
+    st.info("ℹ️ Si el despacho es por transporte externo y no aplica kilometraje, puedes dejar estos campos en 0.")
     col8, col9 = st.columns(2)
     with col8:
         km_inicial = st.number_input("Kilómetros Iniciales", min_value=0.0, step=1.0, format="%.1f")
@@ -120,8 +118,7 @@ if boton_guardar:
                 "RECEPCIONADO POR": recepcionado_por,
                 "KM INICIAL": km_inicial,
                 "KM FINAL": km_final,
-                "KM RECORRIDOS": km_recorridos,
-                "DESTINATARIO FINAL": destinatario_final if destinatario_final.strip() else "Entrega Directa"
+                "KM RECORRIDOS": km_recorridos
             }
             nuevos_registros.append(registro)
         
