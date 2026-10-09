@@ -79,7 +79,7 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     
     st.markdown("---")
     st.subheader("📊 Control de Kilometraje")
-    st.info("ℹ️ Si el despacho es por transporte externo y no aplica kilometraje, puedes dejar estos campos en 0.")
+    # st.info("ℹ️ Si el despacho es por transporte externo y no aplica kilometraje, puedes dejar estos campos en 0.")
     col8, col9 = st.columns(2)
     with col8:
         km_inicial = st.number_input("Kilómetros Iniciales", min_value=0.0, step=1.0, format="%.1f")
