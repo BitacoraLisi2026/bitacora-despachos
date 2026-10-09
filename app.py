@@ -6,26 +6,35 @@ from datetime import datetime
 # Nombre del archivo de Excel
 EXCEL_FILE = "bitacora_despachos.xlsx"
 
-# --- FUNCIÓN INTELIGENTE PARA LEER LISTAS DESDE ARCHIVOS TXT ---
-def cargar_lista(nombre_archivo, mensaje_inicial):
+# --- SISTEMA ULTRA-SEGURO PARA CARGAR LISTAS ---
+def cargar_lista_segura(nombre_archivo, mensaje_inicial, lista_respaldo):
     lista = [mensaje_inicial]
-    if os.path.exists(nombre_archivo):
-        with open(nombre_archivo, "r", encoding="utf-8") as f:
-            lineas = [linea.strip() for linea in f.readlines() if linea.strip()]
-            lista.extend(lineas)
-    else:
-        lista.append("Ejemplo por defecto")
+    try:
+        if os.path.exists(nombre_archivo):
+            with open(nombre_archivo, "r", encoding="utf-8") as f:
+                lineas = [linea.strip() for linea in f.readlines() if linea.strip()]
+                if lineas:
+                    lista.extend(lineas)
+                    return lista
+    except Exception:
+        pass # Si hay error, ignora y usa el respaldo para no romper la app
+    
+    lista.extend(lista_respaldo)
     return lista
 
-# Cargar las listas dinámicamente desde GitHub
-LISTA_CLIENTES = cargar_lista("clientes.txt", "Selecciona un cliente...")
-LISTA_RECEPCION = cargar_lista("receptores.txt", "Selecciona quién recibe...")
+# Listas de respaldo por si GitHub no lee los archivos TXT temporalmente
+RESPALDO_CLIENTES = ["Cliente General 1", "Cliente General 2", "Otro Cliente"]
+RESPALDO_RECEPCION = ["Personal de Turno 1", "Personal de Turno 2"]
+
+# Cargar listas de forma segura
+LISTA_CLIENTES = cargar_lista_segura("clientes.txt", "Selecciona un cliente...", RESPALDO_CLIENTES)
+LISTA_RECEPCION = cargar_lista_segura("receptores.txt", "Selecciona quién recibe...", RESPALDO_RECEPCION)
 # --------------------------------------------------------------
 
 # Configuración de la página
 st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
 
-# Mostrar logo si existe
+# Mostrar logo si existe en el repositorio
 if os.path.exists("logo.png"):
     st.image("logo.png", width=180)
 elif os.path.exists("logo.jpg"):
@@ -115,7 +124,7 @@ if boton_guardar:
         df_final.to_excel(EXCEL_FILE, index=False)
         st.success(f"✅ ¡Se registraron exitosamente {len(lista_documentos)} documentos para este viaje!")
 
-# Mostrar tabla y botón de descarga
+# Mostrar tabla y botón de descarga (Puestos afuera para garantizar que siempre aparezcan)
 if os.path.exists(EXCEL_FILE):
     st.subheader("📋 Últimos despachos registrados")
     df_mostrar = pd.read_excel(EXCEL_FILE)
@@ -128,4 +137,3 @@ if os.path.exists(EXCEL_FILE):
             file_name="bitacora_despachos.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
