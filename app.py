@@ -12,15 +12,22 @@ EXCEL_FILE = "bitacora_despachos.xlsx"
 LISTA_CLIENTES = [
     "Selecciona un cliente...", 
     "DESPACHO EXTERNO",           # <- Opción clave que activa el modo externo
-    "Cliente Real 1", 
-    "Cliente Real 2", 
-    "Cliente Real 3"
+    "VIÑEDOS DE AGUIRRE",
+    "VIÑA CASADONOSO",
+    "VIÑA AROMO",
+    "VIÑA CASA SOLIS",
+    "VIÑA CONCHA Y TORO",
+    "VIÑA LUIS FELIPE EDWARDS",
+    "TRANSPORTES COLCHAGUA"
 ]
 
 LISTA_RECEIPCION = [
     "Selecciona quién recibe...", 
-    "Persona Real 1", 
-    "Persona Real 2"
+    "Camila Villasana",
+    "Olga Gonzalez",
+    "Jorge Diaz",
+    "Encargado Colchagua",
+    "Javiera Ramirez"
 ]
 
 # Agrega o quita aquí tus empresas de transporte externo habituales
@@ -60,7 +67,7 @@ except Exception:
     pass
 
 st.markdown("<h2 style='font-size: 30px; margin-bottom: 0px;'>🚚 Bitácora de Despachos</h2>", unsafe_allow_html=True)
-st.write("Introduce los datos del despacho para registrarlos en el archivo de Excel.")
+st.write("Vamos que se puede, ingresa todos los datos.")
 
 # Formulario elegante de entrada de datos
 with st.form(key="formulario_bitacora", clear_on_submit=True):
