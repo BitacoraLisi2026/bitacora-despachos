@@ -6,41 +6,36 @@ from datetime import datetime
 # Nombre del archivo de Excel
 EXCEL_FILE = "bitacora_despachos.xlsx"
 
-# --- CONFIGURA AQUÍ TUS LISTAS DESPLEGABLES ---
-LISTA_CLIENTES = [
-    "Selecciona un cliente...", 
-    "Cliente A - Logística Express", 
-    "Cliente B - Distribuidora Central", 
-    "Cliente C - Almacenes Unidos",
-    "Otro Cliente"
-]
+# --- FUNCIÓN INTELIGENTE PARA LEER LISTAS DESDE ARCHIVOS TXT ---
+def cargar_lista(nombre_archivo, mensaje_inicial):
+    lista = [mensaje_inicial]
+    if os.path.exists(nombre_archivo):
+        with open(nombre_archivo, "r", encoding="utf-8") as f:
+            lineas = [linea.strip() for linea in f.readlines() if linea.strip()]
+            lista.extend(lineas)
+    else:
+        lista.append("Ejemplo por defecto")
+    return lista
 
-LISTA_RECEPCION = [
-    "Selecciona quién recibe...", 
-    "Juan Pérez", 
-    "María López", 
-    "Carlos Rodríguez", 
-    "Ana Martínez"
-]
-# ----------------------------------------------
+# Cargar las listas dinámicamente desde GitHub
+LISTA_CLIENTES = cargar_lista("clientes.txt", "Selecciona un cliente...")
+LISTA_RECEPCION = cargar_lista("receptores.txt", "Selecciona quién recibe...")
+# --------------------------------------------------------------
 
 # Configuración de la página
 st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
 
-# --- NUEVO: MOSTRAR LOGO SI EXISTE EN REPOSITORIO ---
-# Busca tanto 'logo.png' como 'logo.jpg' automáticamente
+# Mostrar logo si existe
 if os.path.exists("logo.png"):
     st.image("logo.png", width=180)
 elif os.path.exists("logo.jpg"):
     st.image("logo.jpg", width=180)
-# ----------------------------------------------------
 
 st.title("🚚 Registro de Bitácora de Despachos")
 st.write("Introduce los datos del despacho para registrarlos en el archivo de Excel.")
 
 # Formulario de entrada de datos
 with st.form(key="formulario_bitacora", clear_on_submit=True):
-    # Campos de fecha y hora
     col1, col2, col3 = st.columns(3)
     with col1:
         fecha = st.date_input("Fecha", value=datetime.today())
@@ -49,7 +44,6 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     with col3:
         hora_llegada = st.time_input("Hora de Llegada")
         
-    # Campos de texto y desplegables principales
     col4, col5 = st.columns(2)
     with col4:
         conductor = st.text_input("Conductora", value="Elizabeth Utrera")
@@ -58,14 +52,12 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
         cliente = st.selectbox("Cliente", options=LISTA_CLIENTES)
         facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
         
-    # Campos numéricos de carga
     col6, col7 = st.columns(2)
     with col6:
         cant_etiquetas = st.number_input("Cantidad de Etiquetas", min_value=0, step=1)
     with col7:
         cant_cajas = st.number_input("Cantidad de Cajas", min_value=0, step=1)
         
-    # Menú desplegable para Recepción
     recepcionado_por = st.selectbox("Recepcionado Por", options=LISTA_RECEPCION)
     
     st.markdown("---")
@@ -76,10 +68,9 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     with col9:
         km_final = st.number_input("Kilómetros Finales", min_value=0.0, step=1.0, format="%.1f")
     
-    # Botón de envío
     boton_guardar = st.form_submit_button(label="💾 Registrar Despacho")
 
-# Lógica para guardar en Excel al hacer clic
+# Lógica para guardar en Excel
 if boton_guardar:
     lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
     
@@ -124,7 +115,7 @@ if boton_guardar:
         df_final.to_excel(EXCEL_FILE, index=False)
         st.success(f"✅ ¡Se registraron exitosamente {len(lista_documentos)} documentos para este viaje!")
 
-# Mostrar los últimos registros en la app y botón de descarga
+# Mostrar tabla y botón de descarga
 if os.path.exists(EXCEL_FILE):
     st.subheader("📋 Últimos despachos registrados")
     df_mostrar = pd.read_excel(EXCEL_FILE)
@@ -137,3 +128,4 @@ if os.path.exists(EXCEL_FILE):
             file_name="bitacora_despachos.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
