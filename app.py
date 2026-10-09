@@ -42,8 +42,8 @@ try:
 except Exception:
     pass
 
-st.title("🚚 Registro de Bitácora de Despachos")
-st.write("Introduce los datos del despacho para registrarlos en el archivo de Excel.")
+st.title("🚚 Bitácora de Despachos")
+st.write("Vamos que se puede, ingresa todos los datos.")
 
 # Formulario elegante de entrada de datos
 with st.form(key="formulario_bitacora", clear_on_submit=True):
