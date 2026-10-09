@@ -20,7 +20,7 @@ LISTA_CLIENTES = [
     "TRANSPORTES COLCHAGUA"
 ]
 
-LISTA_RECEPCION = [
+LISTA_RECEIPCION = [
     "Selecciona quién recibe...", 
     "Camila Villasana",
     "Olga Gonzalez",
@@ -29,32 +29,6 @@ LISTA_RECEPCION = [
     "Javiera Ramirez"
 ]
 # ==============================================================
-
-# ==============================================================
-# 📋 CONFIGURA AQUÍ TUS DATOS REALES (Escríbelos dentro de las comillas)
-# ==============================================================
-LISTA_CLIENTES = [
-    "Selecciona un cliente...", 
-    "VIÑEDOS DE AGUIRRE",
-    "VIÑA CASADONOSO",
-    "VIÑA AROMO",
-    "VIÑA CASA SOLIS",
-    "VIÑA CONCHA Y TORO",
-    "VIÑA LUIS FELIPE EDWARDS",
-    "TRANSPORTES COLCHAGUA"
-]
-
-LISTA_RECEIPCION = [
-    "Selecciona quién recibe...", 
-    "Camila Villasana",
-    "Olga Gonzalez",
-    "Jorge Diaz",
-    "Encargado Colchagua",
-    "Javiera Ramirez"
-]
-# ==============================================================
-
-
 
 # Configuración elegante de la página
 st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
@@ -103,7 +77,8 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     
     st.markdown("---")
     st.subheader("📊 Control de Kilometraje")
-    st.info("ℹ️ Si el despacho es por transporte externo y no aplica kilometraje, puedes dejar estos campos en 0.")
+    
+    # ELIMINADO: Se quitó la línea del mensaje informativo st.info()
     col8, col9 = st.columns(2)
     with col8:
         km_inicial = st.number_input("Kilómetros Iniciales", min_value=0.0, step=1.0, format="%.1f")
