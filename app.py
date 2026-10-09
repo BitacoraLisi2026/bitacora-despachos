@@ -22,23 +22,23 @@ LISTA_CLIENTES = [
 
 LISTA_RECEIPCION = [
     "Selecciona quién recibe...", 
-    "Camila Villasana",
-    "Olga Gonzalez",
-    "Jorge Diaz",
-    "Encargado Colchagua",
-    "Javiera Ramirez"
+    "CAMILA VILLASANA",
+    "OLGA GONZALEZ",
+    "JORGE DIAZ",
+    "JAVIERA RAMIREZ",
+    "ENCARGADO COLCHAGUA"
 ]
 
 # Lista Unificada de Conductores y Transportes Externos
 LISTA_CONDUCTORES = [
     "Selecciona el conductor o transporte...",
-    "Elizabeth - Colchagua",  # <- Flota propia (Activa kilómetros)
-    "Elizabeth",              # <- Flota propia (Activa kilómetros)
-    "Chilexpress",            # <- Externo (Omite kilómetros)
-    "Starken",                # <- Externo (Omite kilómetros)
-    "FedEx",                  # <- Externo (Omite kilómetros)
-    "Blue Express",           # <- Externo (Omite kilómetros)
-    "Otro Externo"
+    "ELIZABETH",               # <- FLOTA PROPIA (ACTIVA KILÓMETROS)
+    "ELIZABETH - COLCHAGUA",  # <- FLOTA PROPIA (ACTIVA KILÓMETROS)
+    "CHILEXPRESS",            # <- EXTERNO (OMITE KILÓMETROS)
+    "STARKEN",                # <- EXTERNO (OMITE KILÓMETROS)
+    "FEDEX",                  # <- EXTERNO (OMITE KILÓMETROS)
+    "BLUE EXPRESS",           # <- EXTERNO (OMITE KILÓMETROS)
+    "OTRO EXTERNO"
 ]
 # ==============================================================
 
