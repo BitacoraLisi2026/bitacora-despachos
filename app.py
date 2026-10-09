@@ -29,17 +29,6 @@ LISTA_RECEPCION = [
     "Encargado Colchagua",
     "Javiera Ramirez"
 ]
-
-# NUEVA LISTA: Configura aquí tus empresas de transporte habituales
-LISTA_TRANSPORTES = [
-    "Selecciona transporte externo...",
-    "CHILEEXPRESS",
-    "STARKEN",
-    "FEDDEX",
-    "BLUEEXPRESS",
-    "TRANSPORTES COLCHAGUA"
-    
-]
 # ==============================================================
 
 # Configuración elegante de la página
