@@ -30,6 +30,25 @@ LISTA_RECEPCION = [
 ]
 # ==============================================================
 
+# ==============================================================
+# 📋 CONFIGURA AQUÍ TUS DATOS REALES (Escríbelos dentro de las comillas)
+# ==============================================================
+LISTA_CLIENTES = [
+    "Selecciona un cliente...", 
+    "Cliente Real 1", 
+    "Cliente Real 2", 
+    "Cliente Real 3"
+]
+
+LISTA_RECEIPCION = [
+    "Selecciona quién recibe...", 
+    "Persona Real 1", 
+    "Persona Real 2"
+]
+# ==============================================================
+
+
+
 # Configuración elegante de la página
 st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
 
