@@ -9,35 +9,35 @@ EXCEL_FILE = "bitacora_despachos.xlsx"
 # ==============================================================
 # 📋 CONFIGURA AQUÍ TUS DATOS REALES (Escríbelos dentro de las comillas)
 # ==============================================================
-LISTA_CLIENTES_INTERNOS = [
+LISTA_CLIENTES = [
     "Selecciona un cliente...", 
-    "DESPACHO EXTERNO",           # <- Opción que activa el modo externo
     "VIÑEDOS DE AGUIRRE",
-"VIÑA CASADONOSO",
-"VIÑA AROMO",
-"VIÑA CASA SOLIS",
-"VIÑA CONCHA Y TORO",
-"VIÑA LUIS FELIPE EDWARDS",
-"TRANSPORTES COLCHAGUA"
+    "VIÑA CASADONOSO",
+    "VIÑA AROMO",
+    "VIÑA CASA SOLIS",
+    "VIÑA CONCHA Y TORO",
+    "VIÑA LUIS FELIPE EDWARDS",
+    "TRANSPORTES COLCHAGUA"
 ]
 
 LISTA_RECEIPCION = [
     "Selecciona quién recibe...", 
     "Camila Villasana",
-"Olga Gonzalez",
-"Jorge Diaz",
-"Encargado Colchagua",
-"Javiera Ramirez"
+    "Olga Gonzalez",
+    "Jorge Diaz",
+    "Encargado Colchagua",
+    "Javiera Ramirez"
 ]
 
-# Configura aquí tus empresas de transporte externo habituales
-LISTA_TRANSPORTES_EXTERNOS = [
-    "Selecciona la empresa de transporte...",
-    "Chilexpress",
-    "Starken",
-    "FedEx",
-    "Blue Express",
-    "Transportes Colchagua",
+# Lista Unificada de Conductores y Transportes Externos
+LISTA_CONDUCTORES = [
+    "Selecciona el conductor o transporte...",
+    "Elizabeth - Colchagua",  # <- Flota propia (Activa kilómetros)
+    "Elizabeth",              # <- Flota propia (Activa kilómetros)
+    "Chilexpress",            # <- Externo (Omite kilómetros)
+    "Starken",                # <- Externo (Omite kilómetros)
+    "FedEx",                  # <- Externo (Omite kilómetros)
+    "Blue Express",           # <- Externo (Omite kilómetros)
     "Otro Externo"
 ]
 # ==============================================================
@@ -67,7 +67,7 @@ except Exception:
     pass
 
 st.markdown("<h2 style='font-size: 30px; margin-bottom: 0px;'>🚚 Bitácora de Despachos</h2>", unsafe_allow_html=True)
-st.write("Introduce los datos del despacho para registrarlos en el archivo de Excel.")
+st.write("Vamos que se puede, ingresa todos los datos para tu planilla.")
 
 # Formulario elegante de entrada de datos
 with st.form(key="formulario_bitacora", clear_on_submit=True):
@@ -82,32 +82,19 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     st.markdown("---")
     
     col4, col5 = st.columns(2)
+    with col4:
+        # Ahora el conductor es una lista desplegable unificada
+        conductor = st.selectbox("Conductor / Empresa de Transporte", options=LISTA_CONDUCTORES)
+        orden_trabajo = st.text_input("Orden de Trabajo")
+        
     with col5:
-        # Menú inicial de selección de cliente o despacho externo
-        seleccion_cliente = st.selectbox("Cliente / Tipo de Despacho", options=LISTA_CLIENTES_INTERNOS)
-        
-        # Detección automática si es un despacho externo
-        es_viaje_externo = (seleccion_cliente == "DESPACHO EXTERNO")
-        
-        if es_viaje_externo:
-            # Si es externo, te pregunta el nombre del cliente real en texto libre (que será el mismo destino)
-            cliente_final = st.text_input("¿A qué Cliente se envía? (Destino)", value="")
-        else:
-            cliente_final = seleccion_cliente
-
+        cliente = st.selectbox("Cliente (Remitente)", options=LISTA_CLIENTES)
         facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
 
-    with col4:
-        if es_viaje_externo:
-            # Se abre el listado de tus transportistas
-            conductor = st.selectbox("Selecciona la Empresa Externa", options=LISTA_TRANSPORTES_EXTERNOS)
-            nro_flete = st.text_input("Nº de Flete / Orden de Seguimiento", value="")
-        else:
-            # Si eligen un cliente normal, va Elizabeth Utrera por defecto
-            conductor = st.text_input("Conductora", value="Elizabeth Utrera")
-            nro_flete = "N/A"
-            
-        orden_trabajo = st.text_input("Orden de Trabajo")
+    # Detección inteligente del tipo de viaje
+    es_interno = (conductor == "Elizabeth - Colchagua")
+    # Es externo si seleccionó cualquier transporte que NO sea el de Elizabeth ni el mensaje inicial
+    es_externo = (conductor != "Selecciona el conductor o transporte..." and not es_interno)
         
     st.markdown("---")
     col6, col7 = st.columns(2)
@@ -121,8 +108,8 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     st.markdown("---")
     st.subheader("📊 Control de Kilometraje")
     
-    if es_viaje_externo:
-        st.info("ℹ️ Despacho Externo seleccionado: El kilometraje se registrará automáticamente en 0.0")
+    if es_externo:
+        st.info(f"ℹ️ Transporte externo ({conductor}) seleccionado: El kilometraje se registrará automáticamente en 0.0")
         km_inicial = 0.0
         km_final = 0.0
     else:
@@ -138,22 +125,18 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
 if boton_guardar:
     lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
     
-    if seleccion_cliente == "Selecciona un cliente...":
-        st.error("⚠️ Por favor, selecciona un Cliente o el Tipo de Despacho válido.")
-    elif es_viaje_externo and not cliente_final.strip():
-        st.error("⚠️ Por favor, escribe el nombre del Cliente al que va destinado el flete.")
-    elif es_viaje_externo and conductor == "Selecciona la empresa de transporte...":
-        st.error("⚠️ Por favor, selecciona la Empresa Externa que realizará el traslado.")
+    if conductor == "Selecciona el conductor o transporte...":
+        st.error("⚠️ Por favor, selecciona un Conductor o Empresa de transporte válida.")
+    elif cliente == "Selecciona un cliente...":
+        st.error("⚠️ Por favor, selecciona un Cliente válido de la lista.")
     elif len(lista_documentos) == 0:
         st.error("⚠️ Por favor, ingresa al menos una Factura o Guía.")
     elif recepcionado_por == "Selecciona quién recibe...":
         st.error("⚠️ Por favor, selecciona la persona que Recepcionó de la lista.")
-    elif not es_viaje_externo and km_final < km_inicial:
+    elif es_interno and km_final < km_inicial:
         st.error("⚠️ Error: Los Kilómetros Finales no pueden ser menores que los Kilómetros Iniciales.")
-    elif es_viaje_externo and not nro_flete.strip():
-        st.error("⚠️ Por favor, indica el Número de Flete o Seguimiento.")
     else:
-        km_recorridos = km_final - km_inicial if not es_viaje_externo else 0.0
+        km_recorridos = km_final - km_inicial if es_interno else 0.0
         nuevos_registros = []
         
         for doc in lista_documentos:
@@ -161,9 +144,9 @@ if boton_guardar:
                 "FECHA": fecha.strftime("%Y-%m-%d"),
                 "HORA DE DESPACHO": hora_despacho.strftime("%H:%M"),
                 "HORA DE LLEGADA": hora_llegada.strftime("%H:%M"),
-                "CONDUCTOR / EMPRESA": conductor, 
+                "CONDUCTOR": conductor, 
                 "ORDEN DE TRABAJO": orden_trabajo,
-                "CLIENTE": cliente_final,            # <- Guarda el cliente real ingresado por texto
+                "CLIENTE": cliente,
                 "CANTIDAD DE ETIQUETAS": cant_etiquetas,
                 "CANTIDAD DE CAJAS": cant_cajas,
                 "FACTURA O GUIA": doc,
@@ -171,9 +154,7 @@ if boton_guardar:
                 "KM INICIAL": km_inicial,
                 "KM FINAL": km_final,
                 "KM RECORRIDOS": km_recorridos,
-                "TIPO TRANSPORTE": "EXTERNO" if es_viaje_externo else "INTERNO",
-                "DESTINO": cliente_final,            # <- Se duplica automáticamente como el Destino
-                "NRO FLETE / SEGUIMIENTO": nro_flete
+                "TIPO TRANSPORTE": "INTERNO" if es_interno else "EXTERNO"
             }
             nuevos_registros.append(registro)
         
@@ -187,7 +168,7 @@ if boton_guardar:
                 df_final = df_nuevos
                 
             df_final.to_excel(EXCEL_FILE, index=False)
-            st.success(f"✅ ¡Se registraron exitosamente {len(lista_documentos)} documentos para este viaje!")
+            st.success(f"✅ ¡Se registraron exitosamente {len(lista_documentos)} documentos!")
         except Exception as e:
             st.error(f"❌ Error al guardar en Excel: {e}. Inténtalo de nuevo.")
 
