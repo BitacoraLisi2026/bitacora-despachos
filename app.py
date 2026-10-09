@@ -23,9 +23,9 @@ LISTA_CLIENTES = [
 
 LISTA_RECEPCION = [
     "Selecciona quién recibe...", 
-    "Camila Villasana"
-    "Olga Gonzalez"
-    "Jorge Diaz"
+    "Camila Villasana",
+    "Olga Gonzalez",
+    "Jorge Diaz",
     "Colchagua"
 ]
 # ==============================================================
