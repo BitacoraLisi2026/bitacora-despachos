@@ -9,18 +9,22 @@ EXCEL_FILE = "bitacora_despachos.xlsx"
 # --- CONFIGURA AQUÍ TUS LISTAS DESPLEGABLES ---
 LISTA_CLIENTES = [
     "Selecciona un cliente...", 
-    "CASADONOSO", 
+    "VIÑA CASADONOSO", 
     "VIÑEDOS DE AGUIRRE", 
     "VIÑA LOS AROMOS",
-    "VIÑA SOLIS"
+    "VIÑA SOLIS",
+    "VIÑA TOP WINE"
+    
 ]
 
 LISTA_RECEPCION = [
     "Selecciona quién recibe...", 
-    "Camila Donoso", 
+    "Camila Villasana", 
     "María López", 
     "Carlos Rodríguez", 
-    "Ana Martínez"
+    "Ana Martínez",
+    "Olga Gonzalez",
+    "Jorge Diaz"
 ]
 # ----------------------------------------------
 
