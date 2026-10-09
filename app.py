@@ -33,6 +33,17 @@ LISTA_RECEIPCION = [
 # Configuración elegante de la página
 st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
 
+# --- DETECTAR HORA LOCAL DEL USUARIO ---
+try:
+    offset_minutos = st.context.timezone_offset
+    hora_local_dt = datetime.utcnow() - timedelta(minutes=offset_minutos)
+except Exception:
+    hora_local_dt = datetime.now()
+
+fecha_actual = hora_local_dt.date()
+hora_actual = hora_local_dt.time()
+# --------------------------------------
+
 # 🎨 Bloque del Logo: Busca tu imagen sin bloquear la app
 try:
     if os.path.exists("logo.png"):
