@@ -32,8 +32,8 @@ LISTA_RECEIPCION = [
 # Lista Unificada de Conductores y Transportes Externos
 LISTA_CONDUCTORES = [
     "Selecciona el conductor o transporte...",
-    "ELIZABETH",               # <- FLOTA PROPIA (ACTIVA KILÓMETROS)
-    "ELIZABETH - COLCHAGUA",  # <- FLOTA PROPIA (ACTIVA KILÓMETROS)
+    "ELIZABETH",              # <- FLOTA PROPIA (ACTIVA KILÓMETROS)
+    "ELIZABETH - COLCHAGUA",  # <- EXTERNO (OMITE KILÓMETROS)
     "CHILEXPRESS",            # <- EXTERNO (OMITE KILÓMETROS)
     "STARKEN",                # <- EXTERNO (OMITE KILÓMETROS)
     "FEDEX",                  # <- EXTERNO (OMITE KILÓMETROS)
@@ -92,8 +92,8 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
         facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
 
     # Detección inteligente del tipo de viaje
-    es_interno = (conductor == "Elizabeth")
-    # Es externo si seleccionó cualquier transporte que NO sea el de Elizabeth ni el mensaje inicial
+    es_interno = (conductor == "ELIZABETH")
+    # Es externo si seleccionó cualquier transporte que NO sea el de ELIZABETH ni el mensaje inicial
     es_externo = (conductor != "Selecciona el conductor o transporte..." and not es_interno)
         
     st.markdown("---")
