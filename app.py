@@ -9,27 +9,32 @@ EXCEL_FILE = "bitacora_despachos.xlsx"
 # --- CONFIGURA AQUÍ TUS LISTAS DESPLEGABLES ---
 LISTA_CLIENTES = [
     "Selecciona un cliente...", 
-    "VIÑA CASADONOSO", 
-    "VIÑEDOS DE AGUIRRE", 
-    "VIÑA LOS AROMOS",
-    "VIÑA SOLIS",
-    "VIÑA LUIS FELIPE EDWARDS"
+    "Cliente A - Logística Express", 
+    "Cliente B - Distribuidora Central", 
+    "Cliente C - Almacenes Unidos",
+    "Otro Cliente"
 ]
 
 LISTA_RECEPCION = [
     "Selecciona quién recibe...", 
-    "Camila Villasana", 
+    "Juan Pérez", 
     "María López", 
     "Carlos Rodríguez", 
-    "Ana Martínez",
-    "Olga Gonzalez",
-    "Eliza de Aguirre",
-    "Jorge Diaz"
+    "Ana Martínez"
 ]
 # ----------------------------------------------
 
 # Configuración de la página
 st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
+
+# --- NUEVO: MOSTRAR LOGO SI EXISTE EN REPOSITORIO ---
+# Busca tanto 'logo.png' como 'logo.jpg' automáticamente
+if os.path.exists("logo.png"):
+    st.image("logo.png", width=180)
+elif os.path.exists("logo.jpg"):
+    st.image("logo.jpg", width=180)
+# ----------------------------------------------------
+
 st.title("🚚 Registro de Bitácora de Despachos")
 st.write("Introduce los datos del despacho para registrarlos en el archivo de Excel.")
 
@@ -51,7 +56,6 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
         orden_trabajo = st.text_input("Orden de Trabajo")
     with col5:
         cliente = st.selectbox("Cliente", options=LISTA_CLIENTES)
-        # CAMBIO CLAVE: Área de texto para ingresar múltiples documentos (uno por línea)
         facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
         
     # Campos numéricos de carga
@@ -77,10 +81,8 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
 
 # Lógica para guardar en Excel al hacer clic
 if boton_guardar:
-    # Procesar la lista de facturas/guías eliminando espacios y líneas vacías
     lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
     
-    # Validaciones obligatorias
     if cliente == "Selecciona un cliente...":
         st.error("⚠️ Por favor, selecciona un Cliente válido de la lista.")
     elif len(lista_documentos) == 0:
@@ -93,7 +95,6 @@ if boton_guardar:
         km_recorridos = km_final - km_inicial
         nuevos_registros = []
         
-        # Crear una fila en el Excel por cada documento ingresado
         for doc in lista_documentos:
             registro = {
                 "FECHA": fecha.strftime("%Y-%m-%d"),
@@ -104,7 +105,7 @@ if boton_guardar:
                 "CLIENTE": cliente,
                 "CANTIDAD DE ETIQUETAS": cant_etiquetas,
                 "CANTIDAD DE CAJAS": cant_cajas,
-                "FACTURA O GUIA": doc,  # Aquí se asigna cada documento por separado
+                "FACTURA O GUIA": doc,
                 "RECEPCIONADO POR": recepcionado_por,
                 "KM INICIAL": km_inicial,
                 "KM FINAL": km_final,
@@ -112,17 +113,14 @@ if boton_guardar:
             }
             nuevos_registros.append(registro)
         
-        # Crear DataFrame con los nuevos registros
         df_nuevos = pd.DataFrame(nuevos_registros)
         
-        # Cargar datos existentes y concatenar
         if os.path.exists(EXCEL_FILE):
             df_existente = pd.read_excel(EXCEL_FILE)
             df_final = pd.concat([df_existente, df_nuevos], ignore_index=True)
         else:
             df_final = df_nuevos
             
-        # Guardar en Excel
         df_final.to_excel(EXCEL_FILE, index=False)
         st.success(f"✅ ¡Se registraron exitosamente {len(lista_documentos)} documentos para este viaje!")
 
