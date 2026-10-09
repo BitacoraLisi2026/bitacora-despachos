@@ -26,7 +26,7 @@ LISTA_RECEPCION = [
     "Camila Villasana",
     "Olga Gonzalez",
     "Jorge Diaz",
-    "Encargado Colchagua"
+    "Encargado Colchagua",
     "Javiera Ramirez"
 ]
 
