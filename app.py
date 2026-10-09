@@ -62,7 +62,7 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
         # Se queda como texto libre; aparece Elizabeth por defecto pero se puede borrar
         conductor = st.text_input("Conductor / Empresa de Transporte", value="Elizabeth Utrera")
         orden_trabajo = st.text_input("Orden de Trabajo")
-        destinatario_final = st.text_input("Destinatario Final (Para quién va)", value="")
+        # destinatario_final = st.text_input("Destinatario Final (Para quién va)", value="")
         
     with col5:
         cliente = st.selectbox("Cliente (Remitente)", options=LISTA_CLIENTES)
