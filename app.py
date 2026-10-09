@@ -131,7 +131,7 @@ if boton_guardar:
         st.error("⚠️ Por favor, indica el nombre del Conductor o de la Empresa de Transporte.")
     else:
         km_recorridos = km_final - km_inicial if not es_colchagua else 0.0
-        nuevos_registros =
+        nuevos_registros = []
         
         for doc in lista_documentos:
             registro = {
