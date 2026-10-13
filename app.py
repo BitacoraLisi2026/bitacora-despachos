@@ -103,9 +103,9 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     st.markdown("---")
     col6, col7 = st.columns(2)
     with col6:
-        cant_etiquetas = st.number_input("Cant.Etiquetas", min_value=0, step=1)
+        cant_etiquetas = st.number_input("Cantidad de Etiquetas", min_value=0, step=1)
     with col7:
-        cant_cajas = st.number_input("Cant.Bultos", min_value=0, step=1)
+        cant_cajas = st.number_input("Cantidad de Bultos", min_value=0, step=1)
         
     recepcionado_por = st.selectbox("Recepcionado Por", options=LISTA_RECEIPCION)
     
