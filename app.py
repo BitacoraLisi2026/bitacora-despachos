@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import os  # <- ESTA ES LA LÍNEA QUE FALTA
 from datetime import datetime, timedelta
 
 # Librerías profesionales para la construcción de PDFs (ReportLab)
