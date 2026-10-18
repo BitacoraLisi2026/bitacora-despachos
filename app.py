@@ -36,12 +36,12 @@ LISTA_RECEIPCION = [
 # Lista Unificada de Conductores y Transportes Externos
 LISTA_CONDUCTORES = [
     "Selecciona el conductor o transporte...",
-    "ELIZABETH",              # <- FLOTA PROPIA (ACTIVA KILÓMETROS)
-    "ELIZABETH - COLCHAGUA",  # <- EXTERNO (OMITE KILÓMETROS)
-    "CHILEXPRESS",            # <- EXTERNO (OMITE KILÓMETROS)
-    "STARKEN",                # <- EXTERNO (OMITE KILÓMETROS)
-    "FEDEX",                  # <- EXTERNO (OMITE KILÓMETROS)
-    "BLUE EXPRESS",           # <- EXTERNO (OMITE KILÓMETROS)
+    "ELIZABETH",              # <- FLOTA PROPIA
+    "ELIZABETH - COLCHAGUA",  # <- EXTERNO
+    "CHILEXPRESS",            # <- EXTERNO
+    "STARKEN",                # <- EXTERNO
+    "FEDEX",                  # <- EXTERNO
+    "BLUE EXPRESS",           # <- EXTERNO
     "OTRO EXTERNO"
 ]
 # ==============================================================
@@ -87,7 +87,6 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     
     col4, col5 = st.columns(2)
     with col4:
-        # Ahora el conductor es una lista desplegable unificada
         conductor = st.selectbox("Conductor / Empresa de Transporte", options=LISTA_CONDUCTORES)
         orden_trabajo = st.text_input("Orden de Trabajo")
         
@@ -95,10 +94,8 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
         cliente = st.selectbox("Cliente (Remitente)", options=LISTA_CLIENTES)
         facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
 
-    # Detección inteligente del tipo de viaje
+    # Detección del tipo de viaje (Útil para la etiqueta en la base de datos)
     es_interno = (conductor == "ELIZABETH")
-    # Es externo si seleccionó cualquier transporte que NO sea el de ELIZABETH ni el mensaje inicial
-    es_externo = (conductor != "Selecciona el conductor o transporte..." and not es_interno)
         
     st.markdown("---")
     col6, col7 = st.columns(2)
@@ -108,20 +105,6 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
         cant_cajas = st.number_input("Cantidad de Bultos", min_value=0, step=1)
         
     recepcionado_por = st.selectbox("Recepcionado Por", options=LISTA_RECEIPCION)
-    
-    st.markdown("---")
-    st.subheader("📊 Control de Kilometraje")
-    
-    if es_externo:
-        st.info(f"ℹ️ Transporte externo ({conductor}) seleccionado: El kilometraje se registrará automáticamente en 0.0")
-        km_inicial = 0.0
-        km_final = 0.0
-    else:
-        col8, col9 = st.columns(2)
-        with col8:
-            km_inicial = st.number_input("Kilómetros Iniciales", min_value=0.0, step=1.0, format="%.1f")
-        with col9:
-            km_final = st.number_input("Kilómetros Finales", min_value=0.0, step=1.0, format="%.1f")
     
     boton_guardar = st.form_submit_button(label="💾 Registrar Despacho")
 
@@ -137,10 +120,7 @@ if boton_guardar:
         st.error("⚠️ Por favor, ingresa al menos una Factura o Guía.")
     elif recepcionado_por == "Selecciona quién recibe...":
         st.error("⚠️ Por favor, selecciona la persona que Recepcionó de la lista.")
-    elif es_interno and km_final < km_inicial:
-        st.error("⚠️ Error: Los Kilómetros Finales no pueden ser menores que los Kilómetros Iniciales.")
     else:
-        km_recorridos = km_final - km_inicial if es_interno else 0.0
         nuevos_registros = []
         
         for doc in lista_documentos:
@@ -155,9 +135,6 @@ if boton_guardar:
                 "CANT.CAJAS": cant_cajas,
                 "FACT / GUIA": doc,
                 "RECEPCIONADO POR": recepcionado_por,
-               # "KM INICIAL": km_inicial,
-               # "KM FINAL": km_final,
-               # "KM RECORRIDOS": km_recorridos,
                 "TIPO TRANSPORTE": "INTERNO" if es_interno else "EXTERNO"
             }
             nuevos_registros.append(registro)
