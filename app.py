@@ -76,8 +76,8 @@ except Exception:
 st.markdown("<h2 style='font-size: 30px; margin-bottom: 0px;'>🚚 Bitácora de Despachos</h2>", unsafe_allow_html=True)
 st.write("Vamos que se puede, ingresa todos los datos para tu planilla.")
 
-# Formulario elegante de entrada de datos
-with st.form(key="formulario_bitacora", clear_on_submit=True):
+# Formulario principal de entrada de datos
+with st.form(key="formulario_bitacora", clear_on_submit=False):
     col1, col2, col3 = st.columns(3)
     with col1:
         fecha = st.date_input("Fecha", value=fecha_actual)
@@ -106,22 +106,28 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
         cant_etiquetas = st.number_input("Cantidad de Etiquetas", min_value=0, step=1)
     with col7:
         cant_cajas = st.number_input("Cantidad de Bultos", min_value=0, step=1)
-        
-    # Desplegable dinámico que usa el estado de la sesión
-    recepcionado_por = st.selectbox("Recepcionado Por", options=st.session_state.lista_recepcion)
     
-    # Si elige agregar uno nuevo, mostramos el campo de texto DENTRO del formulario
-    nuevo_receptor = ""
-    if recepcionado_por == "➕ Agregar nueva persona...":
-        nuevo_receptor = st.text_input("Escribe el nombre de la nueva persona que recibe:").upper().strip()
-    
-    boton_guardar = st.form_submit_button(label="💾 Registrar Despacho")
+    # El botón ahora solo cierra el formulario para capturar los datos fijos
+    boton_formulario = st.form_submit_button(label="🔑 Confirmar datos del formulario")
+
+# --- SECCIÓN DINÁMICA FUERA DEL FORMULARIO ---
+st.markdown("---")
+st.subheader("👤 Datos de Recepción")
+
+# Desplegable reactivo en tiempo real
+recepcionado_por = st.selectbox("Recepcionado Por", options=st.session_state.lista_recepcion)
+
+# Al estar fuera del formulario, esto se abrirá AL INSTANTE
+nuevo_receptor = ""
+if recepcionado_por == "➕ Agregar nueva persona...":
+    nuevo_receptor = st.text_input("Escribe el nombre de la nueva persona que recibe:").upper().strip()
+
+# Botón final para consolidar y guardar todo en Excel
+boton_guardar = st.button(label="💾 Registrar Despacho Final", type="primary")
 
 # Lógica robusta para guardar en Excel
 if boton_guardar:
     lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
-    
-    # Determinar cuál es el nombre final del receptor
     persona_final_recepcion = nuevo_receptor if recepcionado_por == "➕ Agregar nueva persona..." else recepcionado_por
 
     if conductor == "Selecciona el conductor o transporte...":
@@ -129,15 +135,14 @@ if boton_guardar:
     elif cliente == "Selecciona un cliente...":
         st.error("⚠️ Por favor, selecciona un Cliente válido de la lista.")
     elif len(lista_documentos) == 0:
-        st.error("⚠️ Por favor, ingresa al menos una Factura o Guía.")
+        st.error("⚠️ Por favor, ingresa al menos una Factura o Guía en el formulario.")
     elif recepcionado_por == "Selecciona quién recibe...":
         st.error("⚠️ Por favor, selecciona la persona que Recepcionó de la lista.")
     elif recepcionado_por == "➕ Agregar nueva persona..." and not nuevo_receptor:
         st.error("⚠️ Por favor, escribe el nombre de la nueva persona antes de guardar.")
     else:
-        # SI ES UNA PERSONA NUEVA, LA AGREGAMOS A LA LISTA DE LA SESIÓN PARA EL PRÓXIMO REGISTRO
+        # Guardar la persona en la lista para futuras ocasiones
         if recepcionado_por == "➕ Agregar nueva persona..." and nuevo_receptor not in st.session_state.lista_recepcion:
-            # Lo insertamos antes de la opción de "Agregar nueva persona..."
             st.session_state.lista_recepcion.insert(-1, nuevo_receptor)
             
         nuevos_registros = []
@@ -169,7 +174,6 @@ if boton_guardar:
                 
             df_final.to_excel(EXCEL_FILE, index=False)
             st.success(f"✅ ¡Se registraron exitosamente {len(lista_documentos)} documentos!")
-            # Forzamos recarga para que el nuevo nombre aparezca de inmediato en la lista del formulario limpio
             st.rerun()
         except Exception as e:
             st.error(f"❌ Error al guardar en Excel: {e}. Inténtalo de nuevo.")
