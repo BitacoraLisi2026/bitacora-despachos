@@ -76,7 +76,7 @@ except Exception:
 st.markdown("<h2 style='font-size: 30px; margin-bottom: 0px;'>🚚 Bitácora de Despachos</h2>", unsafe_allow_html=True)
 st.write("Vamos que se puede, ingresa todos los datos para tu planilla.")
 
-# --- ENTRADA DE DATOS SIN FORMULARIO RÍGIDO (Para mantener la interactividad total) ---
+# --- ENTRADA DE DATOS INTERACTIVA ---
 col1, col2, col3 = st.columns(3)
 with col1:
     fecha = st.date_input("Fecha", value=fecha_actual)
@@ -112,13 +112,13 @@ st.subheader("👤 Datos de Recepción")
 # Desplegable reactivo en tiempo real
 recepcionado_por = st.selectbox("Recepcionado Por", options=st.session_state.lista_recepcion)
 
-# Abre el cuadro de texto al instante al presionar la opción
+# Cuadro dinámico instantáneo
 nuevo_receptor = ""
 if recepcionado_por == "➕ Agregar nueva persona...":
     nuevo_receptor = st.text_input("Escribe el nombre de la nueva persona que recibe:").upper().strip()
 
 st.markdown("---")
-# ÚNICO BOTÓN DE GUARDADO
+# BOTÓN DE REGISTRO
 boton_guardar = st.button(label="💾 Registrar Despacho", type="primary", use_container_width=True)
 
 # Lógica robusta para guardar en Excel
@@ -137,12 +137,11 @@ if boton_guardar:
     elif recepcionado_por == "➕ Agregar nueva persona..." and not nuevo_receptor:
         st.error("⚠️ Por favor, escribe el nombre de la nueva persona antes de guardar.")
     else:
-        # Guardar la persona en la lista de la sesión para el futuro
+        # Guardar la persona en la sesión de forma segura sin recargar la pantalla
         if recepcionado_por == "➕ Agregar nueva persona..." and nuevo_receptor not in st.session_state.lista_recepcion:
             st.session_state.lista_recepcion.insert(-1, nuevo_receptor)
             
         nuevos_registros = []
-        
         for doc in lista_documentos:
             registro = {
                 "FECHA": fecha.strftime("%Y-%m-%d"),
@@ -169,26 +168,22 @@ if boton_guardar:
                 df_final = df_nuevos
                 
             df_final.to_excel(EXCEL_FILE, index=False)
-            st.success(f"✅ ¡Se registraron exitosamente {len(lista_documentos)} documentos!")
-            st.rerun()
+            st.success(f"✅ ¡Se registraron exitosamente {len(lista_documentos)} documentos en {EXCEL_FILE}!")
         except Exception as e:
             st.error(f"❌ Error al guardar en Excel: {e}. Inténtalo de nuevo.")
 
-# 📥 Bloque de visualización y descarga (Siempre lee el archivo real del disco)
+# 📥 Bloque de visualización y descarga corregido (Lee de forma segura)
 if os.path.exists(EXCEL_FILE):
-    try:
-        st.markdown("---")
-        st.subheader("📋 Últimos despachos registrados")
-        df_mostrar = pd.read_excel(EXCEL_FILE)
-        st.dataframe(df_mostrar.tail(10), use_container_width=True)
-        
-        with open(EXCEL_FILE, "rb") as f:
-            st.download_button(
-                label="📥 Descargar Bitácora en Excel",
-                data=f,
-                file_name="bitacora_despachos.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-    except Exception as e:
-        st.warning(f"Aviso: El archivo Excel está siendo creado o actualizado: {e}")
+    st.markdown("---")
+    st.subheader("📋 Últimos despachos registrados")
+    df_mostrar = pd.read_excel(EXCEL_FILE)
+    st.dataframe(df_mostrar.tail(10), use_container_width=True)
+    
+    with open(EXCEL_FILE, "rb") as f:
+        st.download_button(
+            label="📥 Descargar Bitácora en Excel",
+            data=f,
+            file_name="bitacora_despachos.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
