@@ -1,189 +1,150 @@
-import streamlit as st
-import pandas as pd
 import os
-from datetime import datetime
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.drawing.image import Image
 
-# Nombre del archivo de Excel
-EXCEL_FILE = "bitacora_despachos.xlsx"
+# Nombres de los archivos
+ARCHIVO_ORIGEN = "bitacora_despachos.xlsx"
+ARCHIVO_INFORME = "Informe_Despachos_Presentacion.xlsx"
+LOGO_FILE = "logo.png"  # Asegúrate de tener tu logo en la misma carpeta
 
-# ==============================================================
-# 📋 CONFIGURA AQUÍ TUS DATOS REALES (Escríbelos dentro de las comillas)
-# ==============================================================
-LISTA_CLIENTES = [
-    "Selecciona un cliente...", 
-    "VIÑEDOS DE AGUIRRE",
-    "VIÑA CASADONOSO",
-    "VIÑA AROMO",
-    "VIÑA CASA SOLIS",
-    "VIÑA TOP WINE",
-    "VIÑA SANTA ALICIA",
-    "VIÑA CONCHA Y TORO",
-    "VIÑA LUIS FELIPE EDWARDS",
-    "TRANSPORTES COLCHAGUA"
-]
+def dar_formato_profesional():
+    if not os.path.exists(ARCHIVO_ORIGEN):
+        print(f"❌ Error: No se encuentra el archivo '{ARCHIVO_ORIGEN}' en esta carpeta.")
+        return
 
-# Inicializamos la lista de recepción en el estado de la sesión si no existe
-if "lista_recepcion" not in st.session_state:
-    st.session_state.lista_recepcion = [
-        "Selecciona quién recibe...", 
-        "CAMILA VILLASANA",
-        "OLGA GONZALEZ",
-        "JORGE DIAZ",
-        "JAVIERA RAMIREZ",
-        "ROBINSON NAVARRO",
-        "ELIZA DE AGUIRRE",
-        "ENCARGADO COLCHAGUA",
-        "➕ Agregar nueva persona..."
-    ]
+    # Cargar el libro de Excel
+    wb = openpyxl.load_workbook(ARCHIVO_ORIGEN)
+    ws = wb.active
+    ws.title = "Control de Despachos"
 
-# Lista Unificada de Conductores y Transportes Externos
-LISTA_CONDUCTORES = [
-    "Selecciona el conductor o transporte...",
-    "ELIZABETH",              # <- FLOTA PROPIA
-    "ELIZABETH - COLCHAGUA",  # <- EXTERNO
-    "CHILEXPRESS",            # <- EXTERNO
-    "STARKEN",                # <- EXTERNO
-    "FEDEX",                  # <- EXTERNO
-    "BLUE EXPRESS",           # <- EXTERNO
-    "OTRO EXTERNO"
-]
-# ==============================================================
+    # 1. Insertar filas al principio para el Encabezado y el Logo
+    ws.insert_rows(1, amount=5)
 
-# Configuración elegante de la página
-st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
-
-# --- AJUSTE DE HORA LOCAL (ZONA HORARIA DE CHILE) ---
-try:
-    import zoneinfo
-    zona_horaria = zoneinfo.ZoneInfo("America/Santiago") 
-    hora_local_dt = datetime.now(zona_horaria)
-except Exception:
-    hora_local_dt = datetime.now()
-
-fecha_actual = hora_local_dt.date()
-hora_actual = hora_local_dt.time()
-# --------------------------------------------------------------
-
-# 🎨 Bloque del Logo: Busca tu imagen sin bloquear la app
-try:
-    if os.path.exists("logo.png"):
-        st.image("logo.png", width=180)
-    elif os.path.exists("logo.jpg"):
-        st.image("logo.jpg", width=180)
-except Exception:
-    pass
-
-st.markdown("<h2 style='font-size: 30px; margin-bottom: 0px;'>🚚 Bitácora de Despachos</h2>", unsafe_allow_html=True)
-st.write("Vamos que se puede, ingresa todos los datos para tu planilla.")
-
-# --- ENTRADA DE DATOS INTERACTIVA ---
-col1, col2, col3 = st.columns(3)
-with col1:
-    fecha = st.date_input("Fecha", value=fecha_actual)
-with col2:
-    hora_despacho = st.time_input("Hora de Despacho", value=hora_actual)
-with col3:
-    hora_llegada = st.time_input("Hora de Llegada", value=hora_actual)
-    
-st.markdown("---")
-
-col4, col5 = st.columns(2)
-with col4:
-    conductor = st.selectbox("Conductor / Empresa de Transporte", options=LISTA_CONDUCTORES)
-    orden_trabajo = st.text_input("Orden de Trabajo")
-    
-with col5:
-    cliente = st.selectbox("Cliente (Remitente)", options=LISTA_CLIENTES)
-    facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
-
-# Detección del tipo de viaje
-es_interno = (conductor == "ELIZABETH")
-    
-st.markdown("---")
-col6, col7 = st.columns(2)
-with col6:
-    cant_etiquetas = st.number_input("Cantidad de Etiquetas", min_value=0, step=1)
-with col7:
-    cant_cajas = st.number_input("Cantidad de Bultos", min_value=0, step=1)
-
-st.markdown("---")
-st.subheader("👤 Datos de Recepción")
-
-# Desplegable reactivo en tiempo real
-recepcionado_por = st.selectbox("Recepcionado Por", options=st.session_state.lista_recepcion)
-
-# Cuadro dinámico instantáneo
-nuevo_receptor = ""
-if recepcionado_por == "➕ Agregar nueva persona...":
-    nuevo_receptor = st.text_input("Escribe el nombre de la nueva persona que recibe:").upper().strip()
-
-st.markdown("---")
-# BOTÓN DE REGISTRO
-boton_guardar = st.button(label="💾 Registrar Despacho", type="primary", use_container_width=True)
-
-# Lógica robusta para guardar en Excel
-if boton_guardar:
-    lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
-    persona_final_recepcion = nuevo_receptor if recepcionado_por == "➕ Agregar nueva persona..." else recepcionado_por
-
-    if conductor == "Selecciona el conductor o transporte...":
-        st.error("⚠️ Por favor, selecciona un Conductor o Empresa de transporte válida.")
-    elif cliente == "Selecciona un cliente...":
-        st.error("⚠️ Por favor, selecciona un Cliente válido de la lista.")
-    elif len(lista_documentos) == 0:
-        st.error("⚠️ Por favor, ingresa al menos una Factura o Guía.")
-    elif recepcionado_por == "Selecciona quién recibe...":
-        st.error("⚠️ Por favor, selecciona la persona que Recepcionó de la lista.")
-    elif recepcionado_por == "➕ Agregar nueva persona..." and not nuevo_receptor:
-        st.error("⚠️ Por favor, escribe el nombre de la nueva persona antes de guardar.")
-    else:
-        # Guardar la persona en la sesión de forma segura sin recargar la pantalla
-        if recepcionado_por == "➕ Agregar nueva persona..." and nuevo_receptor not in st.session_state.lista_recepcion:
-            st.session_state.lista_recepcion.insert(-1, nuevo_receptor)
-            
-        nuevos_registros = []
-        for doc in lista_documentos:
-            registro = {
-                "FECHA": fecha.strftime("%Y-%m-%d"),
-                "HORA SALIDA": hora_despacho.strftime("%H:%M"),
-                "HORA LLEGADA": hora_llegada.strftime("%H:%M"),
-                "CONDUCTOR": conductor, 
-                "OT": orden_trabajo,
-                "CLIENTE": cliente,
-                "CANT.ETIQUETAS": cant_etiquetas,
-                "CANT.CAJAS": cant_cajas,
-                "FACT / GUIA": doc,
-                "RECEPCIONADO POR": persona_final_recepcion,
-                "TIPO TRANSPORTE": "INTERNO" if es_interno else "EXTERNO"
-            }
-            nuevos_registros.append(registro)
-        
-        df_nuevos = pd.DataFrame(nuevos_registros)
-        
+    # Insertar el logo si existe
+    if os.path.exists(LOGO_FILE):
         try:
-            if os.path.exists(EXCEL_FILE):
-                df_existente = pd.read_excel(EXCEL_FILE)
-                df_final = pd.concat([df_existente, df_nuevos], ignore_index=True)
-            else:
-                df_final = df_nuevos
-                
-            df_final.to_excel(EXCEL_FILE, index=False)
-            st.success(f"✅ ¡Se registraron exitosamente {len(lista_documentos)} documentos en {EXCEL_FILE}!")
+            img = Image(LOGO_FILE)
+            img.width = 140
+            img.height = 70
+            ws.add_image(img, 'A1')
         except Exception as e:
-            st.error(f"❌ Error al guardar en Excel: {e}. Inténtalo de nuevo.")
+            print(f"⚠️ Nota con el logo: {e}")
 
-# 📥 Bloque de visualización y descarga corregido (Lee de forma segura)
-if os.path.exists(EXCEL_FILE):
-    st.markdown("---")
-    st.subheader("📋 Últimos despachos registrados")
-    df_mostrar = pd.read_excel(EXCEL_FILE)
-    st.dataframe(df_mostrar.tail(10), use_container_width=True)
+    # Configurar el Título del Informe
+    ws['D2'] = "INFORME CONTROL DE DESPACHOS Y LOGÍSTICA"
+    ws['D2'].font = Font(name="Segoe UI", size=18, bold=True, color="1A1A1A") # Negro elegante
     
-    with open(EXCEL_FILE, "rb") as f:
-        st.download_button(
-            label="📥 Descargar Bitácora en Excel",
-            data=f,
-            file_name="bitacora_despachos.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
-        )
+    ws['D3'] = "Reporte consolidado - Generado de forma automatizada"
+    ws['D3'].font = Font(name="Segoe UI", size=10, italic=True, color="555555")
+
+    # Lista de títulos optimizada a 10 columnas esenciales
+    NUEVOS_TITULOS = (
+        "FECHA", "HORA SALIDA", "HORA LLEGADA", "CONDUCTOR", "OT", 
+        "CLIENTE", "CANT. ETIQUETAS", "CANT. CAJAS", "FACT / GUIA", 
+        "RECEPCIONADO POR"
+    )
+
+    # 2. Definición de Paleta de Colores (Códigos HEX)
+    NEGRO_HEADER = "1A1A1A"      # Fondo de títulos principal
+    GRIS_ALTERNO = "F8FAFC"      # Filas alternas limpias
+    AZUL_DESTACADO = "1E3A8A"    # Para resaltar texto externo
+    AMARILLO_AVISO = "FEF08A"    # Para fletes externos
+    TEXTO_BLANCO = "FFFFFF"
+
+    # Fuentes y Bordes
+    fuente_header = Font(name="Segoe UI", size=10, bold=True, color=TEXTO_BLANCO)
+    fuente_celda = Font(name="Segoe UI", size=10, color="000000")
+    fuente_externo = Font(name="Segoe UI", size=10, color="1E3A8A", bold=True)
+    
+    borde_fino = Border(
+        left=Side(style='thin', color='E2E8F0'),
+        right=Side(style='thin', color='E2E8F0'),
+        top=Side(style='thin', color='E2E8F0'),
+        bottom=Side(style='thin', color='E2E8F0')
+    )
+
+    # 3. Dar formato y renombrar los títulos (Fila 6)
+    fila_headers = 6
+    for col in range(1, len(NUEVOS_TITULOS) + 1):
+        celda = ws.cell(row=fila_headers, column=col)
+        celda.value = NUEVOS_TITULOS[col - 1]
+            
+        celda.fill = PatternFill(start_color=NEGRO_HEADER, end_color=NEGRO_HEADER, fill_type="solid")
+        celda.font = fuente_header
+        celda.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        celda.border = borde_fino
+    
+    ws.row_dimensions[fila_headers].height = 28
+
+    # 4. Formatear las filas de datos de la bitácora (Fila 7 en adelante)
+    total_cajas = 0
+
+    for row in range(7, ws.max_row + 1):
+        ws.row_dimensions[row].height = 20
+        es_fila_par = (row % 2 == 0)
+        
+        # Identificar si es flete externo leyendo el Conductor (Columna 4)
+        nom_conductor = str(ws.cell(row=row, column=4).value).strip()
+        es_flete_externo = (nom_conductor != "Elizabeth - Colchagua" and nom_conductor != "None" and nom_conductor != "")
+
+        # Sumatoria de cajas (Columna 8)
+        try:
+            total_cajas += int(ws.cell(row=row, column=8).value or 0)
+        except Exception:
+            pass
+
+        # Procesamos solo las 10 columnas visibles
+        for col in range(1, len(NUEVOS_TITULOS) + 1):
+            celda = ws.cell(row=row, column=col)
+            celda.font = fuente_celda
+            celda.border = borde_fino
+            
+            # Ajuste de alineaciones para las 10 columnas
+            columnas_centro = (1, 2, 3, 5)  # FECHA, HORA SALIDA, HORA LLEGADA, OT
+            columnas_derecha = (7, 8)       # CANT. ETIQUETAS, CANT. CAJAS
+
+            if col in columnas_centro:
+                celda.alignment = Alignment(horizontal="center", vertical="center")
+            elif col in columnas_derecha:
+                celda.alignment = Alignment(horizontal="right", vertical="center")
+            else:
+                celda.alignment = Alignment(horizontal="left", vertical="center")
+
+            # Aplicar colores corporativos
+            if es_flete_externo:
+                celda.fill = PatternFill(start_color=AMARILLO_AVISO, end_color=AMARILLO_AVISO, fill_type="solid")
+                if col == 4:
+                    celda.font = fuente_externo
+            elif es_fila_par:
+                celda.fill = PatternFill(start_color=GRIS_ALTERNO, end_color=GRIS_ALTERNO, fill_type="solid")
+
+    # Eliminar las columnas sobrantes del archivo final (Kilómetros y Tipo de Transporte)
+    ws.delete_cols(11, amount=4)
+
+    # 5. Agregar bloque de Resumen y Totales al final
+    fila_totales = ws.max_row + 2
+    ws.cell(row=fila_totales, column=2, value="RESUMEN OPERATIVO").font = Font(name="Segoe UI", size=11, bold=True, color=NEGRO_HEADER)
+    
+    ws.cell(row=fila_totales+1, column=2, value="Total Cajas Despachadas:").font = Font(name="Segoe UI", size=10, bold=True)
+    ws.cell(row=fila_totales+1, column=3, value=total_cajas).font = Font(name="Segoe UI", size=10)
+
+    # 6. Auto-ajustar el ancho de las 10 columnas (CORREGIDO PARA ITER_COLS)
+    for col in ws.iter_cols(max_col=len(NUEVOS_TITULOS)):
+        max_len = 0
+        primera_celda = col[0]  # <- Extrae la primera celda real de la tupla
+        col_letter = get_column_letter(primera_celda.column)
+        for cell in col:
+            if cell.row < 6:
+                continue
+            if cell.value:
+                max_len = max(max_len, len(str(cell.value)))
+        ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+
+    # Guardar el informe definitivo
+    wb.save(ARCHIVO_INFORME)
+    print(f"🎯 ¡Informe generado con éxito (10 columnas) como '{ARCHIVO_INFORME}'!")
+
+if __name__ == "__main__":
+    dar_formato_profesional()
