@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Nombre del archivo de Excel
 EXCEL_FILE = "bitacora_despachos.xlsx"
@@ -33,7 +33,7 @@ if "lista_recepcion" not in st.session_state:
         "ROBINSON NAVARRO",
         "ELIZA DE AGUIRRE",
         "ENCARGADO COLCHAGUA",
-        "➕ Agregar nueva persona..."  # <- Nueva opción dinámica
+        "➕ Agregar nueva persona..."
     ]
 
 # Lista Unificada de Conductores y Transportes Externos
@@ -76,54 +76,50 @@ except Exception:
 st.markdown("<h2 style='font-size: 30px; margin-bottom: 0px;'>🚚 Bitácora de Despachos</h2>", unsafe_allow_html=True)
 st.write("Vamos que se puede, ingresa todos los datos para tu planilla.")
 
-# Formulario principal de entrada de datos
-with st.form(key="formulario_bitacora", clear_on_submit=False):
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        fecha = st.date_input("Fecha", value=fecha_actual)
-    with col2:
-        hora_despacho = st.time_input("Hora de Despacho", value=hora_actual)
-    with col3:
-        hora_llegada = st.time_input("Hora de Llegada", value=hora_actual)
-        
-    st.markdown("---")
+# --- ENTRADA DE DATOS SIN FORMULARIO RÍGIDO (Para mantener la interactividad total) ---
+col1, col2, col3 = st.columns(3)
+with col1:
+    fecha = st.date_input("Fecha", value=fecha_actual)
+with col2:
+    hora_despacho = st.time_input("Hora de Despacho", value=hora_actual)
+with col3:
+    hora_llegada = st.time_input("Hora de Llegada", value=hora_actual)
     
-    col4, col5 = st.columns(2)
-    with col4:
-        conductor = st.selectbox("Conductor / Empresa de Transporte", options=LISTA_CONDUCTORES)
-        orden_trabajo = st.text_input("Orden de Trabajo")
-        
-    with col5:
-        cliente = st.selectbox("Cliente (Remitente)", options=LISTA_CLIENTES)
-        facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
+st.markdown("---")
 
-    # Detección del tipo de viaje
-    es_interno = (conductor == "ELIZABETH")
-        
-    st.markdown("---")
-    col6, col7 = st.columns(2)
-    with col6:
-        cant_etiquetas = st.number_input("Cantidad de Etiquetas", min_value=0, step=1)
-    with col7:
-        cant_cajas = st.number_input("Cantidad de Bultos", min_value=0, step=1)
+col4, col5 = st.columns(2)
+with col4:
+    conductor = st.selectbox("Conductor / Empresa de Transporte", options=LISTA_CONDUCTORES)
+    orden_trabajo = st.text_input("Orden de Trabajo")
     
-    # El botón ahora solo cierra el formulario para capturar los datos fijos
-    boton_formulario = st.form_submit_button(label="🔑 Confirmar datos del formulario")
+with col5:
+    cliente = st.selectbox("Cliente (Remitente)", options=LISTA_CLIENTES)
+    facturas_guias_texto = st.text_area("Facturas o Guías (Escribe una por línea si son varias)")
 
-# --- SECCIÓN DINÁMICA FUERA DEL FORMULARIO ---
+# Detección del tipo de viaje
+es_interno = (conductor == "ELIZABETH")
+    
+st.markdown("---")
+col6, col7 = st.columns(2)
+with col6:
+    cant_etiquetas = st.number_input("Cantidad de Etiquetas", min_value=0, step=1)
+with col7:
+    cant_cajas = st.number_input("Cantidad de Bultos", min_value=0, step=1)
+
 st.markdown("---")
 st.subheader("👤 Datos de Recepción")
 
 # Desplegable reactivo en tiempo real
 recepcionado_por = st.selectbox("Recepcionado Por", options=st.session_state.lista_recepcion)
 
-# Al estar fuera del formulario, esto se abrirá AL INSTANTE
+# Abre el cuadro de texto al instante al presionar la opción
 nuevo_receptor = ""
 if recepcionado_por == "➕ Agregar nueva persona...":
     nuevo_receptor = st.text_input("Escribe el nombre de la nueva persona que recibe:").upper().strip()
 
-# Botón final para consolidar y guardar todo en Excel
-boton_guardar = st.button(label="💾 Registrar Despacho Final", type="primary")
+st.markdown("---")
+# ÚNICO BOTÓN DE GUARDADO
+boton_guardar = st.button(label="💾 Registrar Despacho", type="primary", use_container_width=True)
 
 # Lógica robusta para guardar en Excel
 if boton_guardar:
@@ -135,13 +131,13 @@ if boton_guardar:
     elif cliente == "Selecciona un cliente...":
         st.error("⚠️ Por favor, selecciona un Cliente válido de la lista.")
     elif len(lista_documentos) == 0:
-        st.error("⚠️ Por favor, ingresa al menos una Factura o Guía en el formulario.")
+        st.error("⚠️ Por favor, ingresa al menos una Factura o Guía.")
     elif recepcionado_por == "Selecciona quién recibe...":
         st.error("⚠️ Por favor, selecciona la persona que Recepcionó de la lista.")
     elif recepcionado_por == "➕ Agregar nueva persona..." and not nuevo_receptor:
         st.error("⚠️ Por favor, escribe el nombre de la nueva persona antes de guardar.")
     else:
-        # Guardar la persona en la lista para futuras ocasiones
+        # Guardar la persona en la lista de la sesión para el futuro
         if recepcionado_por == "➕ Agregar nueva persona..." and nuevo_receptor not in st.session_state.lista_recepcion:
             st.session_state.lista_recepcion.insert(-1, nuevo_receptor)
             
@@ -178,20 +174,21 @@ if boton_guardar:
         except Exception as e:
             st.error(f"❌ Error al guardar en Excel: {e}. Inténtalo de nuevo.")
 
-# 📥 Bloque de descarga (Siempre visible abajo)
-try:
-    if os.path.exists(EXCEL_FILE):
+# 📥 Bloque de visualización y descarga (Siempre lee el archivo real del disco)
+if os.path.exists(EXCEL_FILE):
+    try:
         st.markdown("---")
         st.subheader("📋 Últimos despachos registrados")
         df_mostrar = pd.read_excel(EXCEL_FILE)
-        st.dataframe(df_mostrar.tail(10))
+        st.dataframe(df_mostrar.tail(10), use_container_width=True)
         
         with open(EXCEL_FILE, "rb") as f:
             st.download_button(
                 label="📥 Descargar Bitácora en Excel",
                 data=f,
                 file_name="bitacora_despachos.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
             )
-except Exception:
-    pass
+    except Exception as e:
+        st.warning(f"Aviso: El archivo Excel está siendo creado o actualizado: {e}")
