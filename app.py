@@ -31,11 +31,10 @@ LISTA_CONDUCTORES = [
     "CHILEXPRESS", "STARKEN", "FEDEX", "BLUE EXPRESS", "OTRO EXTERNO"
 ]
 
-# 🔑 CAMBIA TU CONTRASEÑA AQUÍ PARA MODIFICAR O BORRAR DATOS
 PASSWORD_ADMIN = "admin123"
 # ==============================================================
 
-st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
+st.set_page_config(page_title="Gestión de Despachos", page_icon="🚚", layout="wide") # Cambiado a layout wide para el informe
 
 def inicializar_bd():
     conn = sqlite3.connect(DB_FILE)
@@ -71,10 +70,63 @@ except Exception:
 fecha_actual = hora_local_dt.date()
 hora_actual = hora_local_dt.time()
 
-st.markdown("<h2 style='font-size: 30px; margin-bottom: 0px;'>🚚 Bitácora de Despachos (Nube)</h2>", unsafe_allow_html=True)
-st.write("Ingresa los datos para actualizar la base de datos en tiempo real.")
+# ==============================================================
+# 📊 MÓDULO 1: DASHBOARD EJECUTIVO (INFORME GERENCIAL)
+# ==============================================================
+st.markdown("<h1 style='font-size: 32px; color: #1E3A8A; margin-bottom: 5px;'>📊 Panel de Gestión e Informe de Despachos</h1>", unsafe_allow_html=True)
+st.write("Resumen ejecutivo del estado de las gestiones y distribución logística en tiempo real.")
 
-# Formulario básico limpio de kilómetros
+try:
+    if os.path.exists(DB_FILE):
+        conn = sqlite3.connect(DB_FILE)
+        df_informe = pd.read_sql_query("SELECT * FROM despachos;", conn)
+        conn.close()
+        
+        if not df_informe.empty:
+            # 1. Fila de Tarjetas de Métricas Ejecutivas
+            m1, m2, m3, m4 = st.columns(4)
+            with m1:
+                st.metric(label="📄 Total Documentos Procesados", value=f"{len(df_informe)} guías/facturas")
+            with m2:
+                st.metric(label="📦 Total Cajas Distribuidas", value=f"{int(df_informe['cantidad_cajas'].sum()):,}")
+            with m3:
+                st.metric(label="🏷️ Total Etiquetas Controladas", value=f"{int(df_informe['cantidad_etiquetas'].sum()):,}")
+            with m4:
+                # Clientes únicos atendidos
+                clientes_activos = df_informe['cliente'].nunique()
+                st.metric(label="🏢 Clientes Atendidos", value=clientes_activos)
+                
+            st.markdown("---")
+            
+            # 2. Fila de Gráficos Estadísticos
+            g1, g2 = st.columns(2)
+            
+            with g1:
+                st.markdown("### 🏢 Volumen de Despachos por Cliente")
+                despachos_cliente = df_informe['cliente'].value_index if hasattr(df_informe['cliente'], 'value_index') else df_informe['cliente'].value_counts().reset_index()
+                despachos_cliente.columns = ['Cliente', 'Documentos']
+                st.bar_chart(data=despachos_cliente, x='Cliente', y='Documentos', color="#1E3A8A")
+                
+            with g2:
+                st.markdown("### 🚚 Operaciones por Conductor / Transporte")
+                despachos_conductor = df_informe['conductor'].value_counts().reset_index()
+                despachos_conductor.columns = ['Conductor', 'Despachos']
+                st.bar_chart(data=despachos_conductor, x='Conductor', y='Despachos', color="#10B981")
+                
+            st.markdown("<br>", unsafe_allow_html=True)
+        else:
+            st.info("ℹ️ Esperando los primeros registros para construir el informe estadístico gerencial.")
+except Exception as e:
+    st.warning(f"Cargando panel estadístico... ({e})")
+
+st.markdown("---")
+
+# ==============================================================
+# 📥 MÓDULO 2: INGRESO DE DATOS (FORMULARIO ABIERTO)
+# ==============================================================
+st.markdown("<h2 style='font-size: 24px; margin-bottom: 0px;'>🚚 Registro de Nuevos Despachos</h2>", unsafe_allow_html=True)
+st.write("Área operativa para la digitación en terreno desde dispositivos móviles o PC.")
+
 with st.form(key="formulario_bitacora", clear_on_submit=True):
     col1, col2, col3 = st.columns(3)
     with col1: fecha = st.date_input("Fecha", value=fecha_actual)
@@ -133,7 +185,9 @@ if boton_guardar:
         except Exception as e:
             st.error(f"❌ Error al guardar: {e}")
 
-# === ⚙️ PANEL DE EDICIÓN Y BORRADO (MODO ADMINISTRADOR) ===
+# ==============================================================
+# ⚙️ MÓDULO 3: HISTORIAL, CONTROL DE DATOS Y DESCARGA
+# ==============================================================
 try:
     if os.path.exists(DB_FILE):
         conn = sqlite3.connect(DB_FILE)
@@ -142,28 +196,18 @@ try:
         
         if not df_completo.empty:
             st.markdown("---")
-            st.subheader("📋 Historial de despachos")
+            st.subheader("📋 Últimos despachos registrados")
             
-            # Formulario de contraseña oculto
-            with st.expander("🛠️ Hacer cambios (Modificar o borrar registros)"):
+            with st.expander("🛠️ Panel de Administración (Modificar o borrar registros)"):
                 clave = st.text_input("Ingresa la clave de administrador para desbloquear la edición:", type="password")
                 
                 if clave == PASSWORD_ADMIN:
-                    st.info("💡 Haz doble clic en una celda para editarla. Para borrar filas completas, selecciónalas marcando el cuadro de la izquierda y presiona 'Supr' en tu teclado.")
-                    
-                    # El editor interactivo de Streamlit
-                    df_editado = st.data_editor(
-                        df_completo, 
-                        num_rows="dynamic", 
-                        use_container_width=True,
-                        key="editor_bd"
-                    )
-                    
+                    st.info("💡 Haz doble clic en una celda para editarla. Para borrar filas completas, selecciónalas y presiona 'Supr'.")
+                    df_editado = st.data_editor(df_completo, num_rows="dynamic", use_container_width=True, key="editor_bd")
                     boton_guardar_cambios = st.button("🔒 Guardar Cambios en la Nube")
                     
                     if boton_guardar_cambios:
                         try:
-                            # Reemplazamos la tabla de la base de datos con los datos modificados
                             conn = sqlite3.connect(DB_FILE)
                             df_editado.to_sql("despachos", conn, if_exists="replace", index=False)
                             conn.commit()
@@ -175,20 +219,8 @@ try:
                 elif clave != "":
                     st.error("🔑 Clave incorrecta.")
             
-            # Vista normal estática para choferes (No editable)
-            st.dataframe(df_completo.drop(columns=["id"], errors="ignore").head(15), use_container_width=True)
+            # Vista normal estática para choferes
+            st.dataframe(df_completo.drop(columns=["id"], errors="ignore").head(10), use_container_width=True)
             
-            # Botón de descarga de siempre usando los últimos datos guardados
-            import io
+            # Botón de descarga
             buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                df_completo.drop(columns=["id"], errors="ignore").to_excel(writer, index=False, sheet_name='Despachos')
-            
-            st.download_button(
-                label="📥 Descargar Base de Datos Completa (Excel)",
-                data=buffer.getvalue(),
-                file_name="bitacora_despachos_nube.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-except Exception as e:
-    st.error(f"Error de visualización: {e}")
