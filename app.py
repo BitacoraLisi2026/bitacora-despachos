@@ -226,12 +226,11 @@ if not df_completo.empty:
     df_visualizar = df_completo.drop(columns=["id"], errors="ignore")
     st.dataframe(df_visualizar.head(10), use_container_width=True)
     
-    # Descarga de Excel lineal (Alineación corregida y segura)
+    # Conversión directa e infalible en 2 líneas sin declarar objetos anidados
     buffer = io.BytesIO()
-    writer = pd.ExcelWriter(buffer, engine='openpyxl')
-    df_visualizar.to_excel(writer, index=False, sheet_name='Despachos')
-    writer.close()
+    df_visualizar.to_excel(buffer, index=False, engine="openpyxl")
     
     st.download_button(
         label="📥 Descargar Base de Datos Completa (Excel)",
         data=buffer.getvalue(),
+        file_name="bitacora_despachos_nube.xlsx",
