@@ -226,12 +226,12 @@ if not df_completo.empty:
     df_visualizar = df_completo.drop(columns=["id"], errors="ignore")
     st.dataframe(df_visualizar.head(10), use_container_width=True)
     
-    # Descarga de Excel de forma segura en memoria
-    try:
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df_visualizar.to_excel(writer, index=False, sheet_name='Despachos')
-        
-        st.download_button(
-            label="📥 Descargar Base de Datos Completa (Excel)",
-            data=buffer.getvalue(),
+    # Descarga de Excel lineal (Alineación corregida y segura)
+    buffer = io.BytesIO()
+    writer = pd.ExcelWriter(buffer, engine='openpyxl')
+    df_visualizar.to_excel(writer, index=False, sheet_name='Despachos')
+    writer.close()
+    
+    st.download_button(
+        label="📥 Descargar Base de Datos Completa (Excel)",
+        data=buffer.getvalue(),
