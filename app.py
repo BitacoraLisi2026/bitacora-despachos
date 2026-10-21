@@ -1,10 +1,6 @@
 import streamlit as st
 import pandas as pd
-import os
 from datetime import datetime
-
-# Nombre del archivo de Excel en el servidor
-EXCEL_FILE = "bitacora_despachos.xlsx"
 
 # ==============================================================
 # 📋 CONFIGURA AQUÍ TUS DATOS REALES
@@ -32,6 +28,28 @@ LISTA_CONDUCTORES = [
 
 st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
 
+# --- CONEXIÓN A LA BASE DE DATOS EN LA NUBE ---
+conn = st.connection("sqlite", type="sql")
+
+# Crear la tabla automáticamente si no existe en la base de datos
+with conn.session as session:
+    session.execute("""
+        CREATE TABLE IF NOT EXISTS despachos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha TEXT,
+            hora_despacho TEXT,
+            hora_llegada TEXT,
+            conductor TEXT,
+            orden_trabajo TEXT,
+            cliente TEXT,
+            cantidad_etiquetas INTEGER,
+            cantidad_cajas INTEGER,
+            factura_guia TEXT,
+            recepcionado_por TEXT
+        );
+    """)
+    session.commit()
+
 # --- AJUSTE DE HORA LOCAL (CHILE) ---
 try:
     import zoneinfo
@@ -43,8 +61,8 @@ except Exception:
 fecha_actual = hora_local_dt.date()
 hora_actual = hora_local_dt.time()
 
-st.markdown("<h2 style='font-size: 30px; margin-bottom: 0px;'>🚚 Bitácora de Despachos</h2>", unsafe_allow_html=True)
-st.write("Ingresa los datos para actualizar la planilla automáticamente.")
+st.markdown("<h2 style='font-size: 30px; margin-bottom: 0px;'>🚚 Bitácora de Despachos (Nube)</h2>", unsafe_allow_html=True)
+st.write("Ingresa los datos para actualizar la base de datos en tiempo real.")
 
 # Formulario básico limpio de kilómetros
 with st.form(key="formulario_bitacora", clear_on_submit=True):
@@ -71,7 +89,7 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     
     boton_guardar = st.form_submit_button(label="💾 Registrar Despacho")
 
-# Lógica de Guardado en el Excel local del servidor
+# Lógica de Guardado en la Base de Datos SQL
 if boton_guardar:
     lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
     
@@ -84,50 +102,61 @@ if boton_guardar:
     elif recepcionado_por == "Selecciona quién recibe...":
         st.error("⚠️ Por favor, selecciona el receptor.")
     else:
-        nuevos_registros = []
-        for doc in lista_documentos:
-            nuevos_registros.append({
-                "FECHA": fecha.strftime("%Y-%m-%d"),
-                "HORA DE DESPACHO": hora_despacho.strftime("%H:%M"),
-                "HORA DE LLEGADA": hora_llegada.strftime("%H:%M"),
-                "CONDUCTOR": conductor, 
-                "ORDEN DE TRABAJO": orden_trabajo,
-                "CLIENTE": cliente,
-                "CANTIDAD DE ETIQUETAS": int(cant_etiquetas),
-                "CANTIDAD DE CAJAS": int(cant_cajas),
-                "FACTURA O GUIA": doc,
-                "RECEIPCIONADO POR": recepcionado_por
-            })
-        
-        df_nuevos = pd.DataFrame(nuevos_registros)
-        
         try:
-            if os.path.exists(EXCEL_FILE):
-                df_existente = pd.read_excel(EXCEL_FILE, engine='openpyxl')
-                df_final = pd.concat([df_existente, df_nuevos], ignore_index=True)
-            else:
-                df_final = df_nuevos
+            with conn.session as session:
+                for doc in lista_documentos:
+                    session.execute(
+                        """
+                        INSERT INTO despachos (
+                            fecha, hora_despacho, hora_llegada, conductor, 
+                            orden_trabajo, cliente, cantidad_etiquetas, 
+                            cantidad_cajas, factura_guia, recepcionado_por
+                        ) VALUES (:fecha, :hora_despacho, :hora_llegada, :conductor, 
+                                  :orden_trabajo, :cliente, :cantidad_etiquetas, 
+                                  :cantidad_cajas, :factura_guia, :recepcionado_por);
+                        """,
+                        {
+                            "fecha": fecha.strftime("%Y-%m-%d"),
+                            "hora_despacho": hora_despacho.strftime("%H:%M"),
+                            "hora_llegada": hora_llegada.strftime("%H:%M"),
+                            "conductor": conductor,
+                            "orden_trabajo": orden_trabajo,
+                            "cliente": cliente,
+                            "cantidad_etiquetas": int(cant_etiquetas),
+                            "cantidad_cajas": int(cant_cajas),
+                            "factura_guia": doc,
+                            "recepcionado_por": recepcionado_por
+                        }
+                    )
+                session.commit()
                 
-            df_final.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
-            st.success(f"✅ ¡Despacho registrado con éxito! Se agregaron {len(lista_documentos)} filas.")
+            st.success(f"✅ ¡Despacho registrado en la nube! Se agregaron {len(lista_documentos)} filas.")
             st.rerun()
         except Exception as e:
-            st.error(f"❌ Error al guardar datos: {e}")
+            st.error(f"❌ Error al guardar en la base de datos: {e}")
 
-# Tabla inferior y Botón de descarga siempre disponibles
-if os.path.exists(EXCEL_FILE):
-    try:
+# Sección de Visualización y Descarga desde la Nube
+try:
+    df_mostrar = conn.query("SELECT * FROM despachos ORDER BY id DESC LIMIT 50;")
+    if not df_mostrar.empty:
         st.markdown("---")
-        st.subheader("📋 Últimos despachos registrados")
-        df_mostrar = pd.read_excel(EXCEL_FILE, engine='openpyxl')
-        st.dataframe(df_mostrar.tail(15), use_container_width=True)
+        st.subheader("📋 Últimos despachos registrados (Base de Datos)")
         
-        with open(EXCEL_FILE, "rb") as f:
-            st.download_button(
-                label="📥 Descargar Base de Datos Completa (Excel)",
-                data=f,
-                file_name="bitacora_despachos.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-    except Exception:
-        pass
+        # Mostrar las columnas ordenadas y limpias sin la columna ID interna
+        df_visualizar = df_mostrar.drop(columns=["id"], errors="ignore")
+        st.dataframe(df_visualizar.head(15), use_container_width=True)
+        
+        # Convertir a Excel en memoria para la descarga rápida
+        import io
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df_visualizar.to_excel(writer, index=False, sheet_name='Despachos')
+        
+        st.download_button(
+            label="📥 Descargar Base de Datos Completa (Excel)",
+            data=buffer.getvalue(),
+            file_name="bitacora_despachos_nube.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+except Exception:
+    pass
