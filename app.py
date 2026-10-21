@@ -1,6 +1,10 @@
 import streamlit as st
 import pandas as pd
+import os
 from datetime import datetime
+
+# Nombre del archivo de Excel en el servidor
+EXCEL_FILE = "bitacora_despachos.xlsx"
 
 # ==============================================================
 # 📋 CONFIGURA AQUÍ TUS DATOS REALES
@@ -28,12 +32,6 @@ LISTA_CONDUCTORES = [
 
 st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
 
-# --- CONEXIÓN DIRECTA PARA LEER GOOGLE SHEETS ---
-try:
-    conn = st.connection("gsheets", type="sheets")
-except Exception:
-    conn = None
-
 # --- AJUSTE DE HORA LOCAL (CHILE) ---
 try:
     import zoneinfo
@@ -46,9 +44,9 @@ fecha_actual = hora_local_dt.date()
 hora_actual = hora_local_dt.time()
 
 st.markdown("<h2 style='font-size: 30px; margin-bottom: 0px;'>🚚 Bitácora de Despachos</h2>", unsafe_allow_html=True)
-st.write("Ingresa los datos para actualizar la planilla automáticamente en la nube.")
+st.write("Ingresa los datos para actualizar la planilla automáticamente.")
 
-# Formulario básico
+# Formulario básico limpio de kilómetros
 with st.form(key="formulario_bitacora", clear_on_submit=True):
     col1, col2, col3 = st.columns(3)
     with col1: fecha = st.date_input("Fecha", value=fecha_actual)
@@ -73,7 +71,7 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     
     boton_guardar = st.form_submit_button(label="💾 Registrar Despacho")
 
-# Lógica de Guardado usando la API de envío directo
+# Lógica de Guardado en el Excel local del servidor
 if boton_guardar:
     lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
     
@@ -86,58 +84,50 @@ if boton_guardar:
     elif recepcionado_por == "Selecciona quién recibe...":
         st.error("⚠️ Por favor, selecciona el receptor.")
     else:
+        nuevos_registros = []
+        for doc in lista_documentos:
+            nuevos_registros.append({
+                "FECHA": fecha.strftime("%Y-%m-%d"),
+                "HORA DE DESPACHO": hora_despacho.strftime("%H:%M"),
+                "HORA DE LLEGADA": hora_llegada.strftime("%H:%M"),
+                "CONDUCTOR": conductor, 
+                "ORDEN DE TRABAJO": orden_trabajo,
+                "CLIENTE": cliente,
+                "CANTIDAD DE ETIQUETAS": int(cant_etiquetas),
+                "CANTIDAD DE CAJAS": int(cant_cajas),
+                "FACTURA O GUIA": doc,
+                "RECEIPCIONADO POR": recepcionado_por
+            })
+        
+        df_nuevos = pd.DataFrame(nuevos_registros)
+        
         try:
-            # Obtener el ID de la hoja desde los secrets de manera limpia
-            url_planilla = st.secrets["connections"]["gsheets"]["spreadsheet"]
-            sheet_id = url_planilla.split("/d/")[1].split("/")[0]
-            
-            # Dirección del script de Google alternativo para escritura libre
-            url_envio = f"https://google.com" 
-            
-            # Para asegurar la escritura sin Cuenta de Servicio pesada, simulamos la inserción mediante Pandas URL si falla
-            # Intentamos la inserción nativa limpia primero
-            nuevos_registros = []
-            for doc in lista_documentos:
-                nuevos_registros.append({
-                    "FECHA": fecha.strftime("%Y-%m-%d"),
-                    "HORA DE DESPACHO": hora_despacho.strftime("%H:%M"),
-                    "HORA DE LLEGADA": hora_llegada.strftime("%H:%M"),
-                    "CONDUCTOR": conductor, 
-                    "ORDEN DE TRABAJO": orden_trabajo,
-                    "CLIENTE": cliente,
-                    "CANTIDAD DE ETIQUETAS": int(cant_etiquetas),
-                    "CANTIDAD DE CAJAS": int(cant_cajas),
-                    "FACTURA O GUIA": doc,
-                    "RECEIPCIONADO POR": recepcionado_por
-                })
-            
-            df_nuevos = pd.DataFrame(nuevos_registros)
-            
-            try:
-                df_existente = conn.read()
-            except Exception:
-                df_existente = pd.DataFrame()
-                
-            if not df_existente.empty:
+            if os.path.exists(EXCEL_FILE):
+                df_existente = pd.read_excel(EXCEL_FILE, engine='openpyxl')
                 df_final = pd.concat([df_existente, df_nuevos], ignore_index=True)
             else:
                 df_final = df_nuevos
                 
-            # Intento de empuje directo usando el conector de Sheets básico
-            conn.update(data=df_final)
-            st.success(f"✅ ¡Guardado en la nube! Se registraron {len(lista_documentos)} documentos.")
+            df_final.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
+            st.success(f"✅ ¡Despacho registrado con éxito! Se agregaron {len(lista_documentos)} filas.")
             st.rerun()
-            
         except Exception as e:
             st.error(f"❌ Error al guardar datos: {e}")
 
-# Muestra la tabla de Google Sheets abajo si está conectada
-if conn:
+# Tabla inferior y Botón de descarga siempre disponibles
+if os.path.exists(EXCEL_FILE):
     try:
         st.markdown("---")
-        st.subheader("📋 Últimos despachos registrados (Nube)")
-        df_mostrar = conn.read()
-        if not df_mostrar.empty:
-            st.dataframe(df_mostrar.dropna(how="all").tail(10), use_container_width=True)
+        st.subheader("📋 Últimos despachos registrados")
+        df_mostrar = pd.read_excel(EXCEL_FILE, engine='openpyxl')
+        st.dataframe(df_mostrar.tail(15), use_container_width=True)
+        
+        with open(EXCEL_FILE, "rb") as f:
+            st.download_button(
+                label="📥 Descargar Base de Datos Completa (Excel)",
+                data=f,
+                file_name="bitacora_despachos.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
     except Exception:
         pass
