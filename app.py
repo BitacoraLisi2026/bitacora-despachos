@@ -30,11 +30,13 @@ LISTA_CONDUCTORES = [
     "ELIZABETH - COLCHAGUA",  
     "CHILEXPRESS", "STARKEN", "FEDEX", "BLUE EXPRESS", "OTRO EXTERNO"
 ]
+
+# 🔑 CAMBIA TU CONTRASEÑA AQUÍ PARA MODIFICAR O BORRAR DATOS
+PASSWORD_ADMIN = "admin123"
 # ==============================================================
 
 st.set_page_config(page_title="Bitácora de Despachos", page_icon="🚚", layout="centered")
 
-# --- CONEXIÓN INICIAL A BASE DE DATOS SQL NATIVA ---
 def inicializar_bd():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -97,7 +99,6 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
     
     boton_guardar = st.form_submit_button(label="💾 Registrar Despacho")
 
-# Lógica de Guardado en SQL Nativo
 if boton_guardar:
     lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
     
@@ -113,7 +114,6 @@ if boton_guardar:
         try:
             conn = sqlite3.connect(DB_FILE)
             cursor = conn.cursor()
-            
             for doc in lista_documentos:
                 cursor.execute(
                     """
@@ -123,46 +123,66 @@ if boton_guardar:
                         cantidad_cajas, factura_guia, recepcionado_por
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                     """,
-                    (
-                        fecha.strftime("%Y-%m-%d"),
-                        hora_despacho.strftime("%H:%M"),
-                        hora_llegada.strftime("%H:%M"),
-                        conductor,
-                        orden_trabajo,
-                        cliente,
-                        int(cant_etiquetas),
-                        int(cant_cajas),
-                        doc,
-                        recepcionado_por
-                    )
+                    (fecha.strftime("%Y-%m-%d"), hora_despacho.strftime("%H:%M"), hora_llegada.strftime("%H:%M"),
+                     conductor, orden_trabajo, cliente, int(cant_etiquetas), int(cant_cajas), doc, recepcionado_por)
                 )
             conn.commit()
             conn.close()
-                
-            st.success(f"✅ ¡Despacho registrado en la nube! Se agregaron {len(lista_documentos)} filas.")
+            st.success(f"✅ ¡Despacho registrado en la nube!")
             st.rerun()
         except Exception as e:
-            st.error(f"❌ Error al guardar en la base de datos: {e}")
+            st.error(f"❌ Error al guardar: {e}")
 
-# Sección de Visualización y Descarga desde SQL Nativo
+# === ⚙️ PANEL DE EDICIÓN Y BORRADO (MODO ADMINISTRADOR) ===
 try:
     if os.path.exists(DB_FILE):
         conn = sqlite3.connect(DB_FILE)
-        df_mostrar = pd.read_sql_query("SELECT * FROM despachos ORDER BY id DESC LIMIT 50;", conn)
+        df_completo = pd.read_sql_query("SELECT * FROM despachos ORDER BY id DESC;", conn)
         conn.close()
         
-        if not df_mostrar.empty:
+        if not df_completo.empty:
             st.markdown("---")
-            st.subheader("📋 Últimos despachos registrados (Base de Datos)")
+            st.subheader("📋 Historial de despachos")
             
-            # Limpiar la visualización para el usuario
-            df_visualizar = df_mostrar.drop(columns=["id"], errors="ignore")
-            st.dataframe(df_visualizar.head(15), use_container_width=True)
+            # Formulario de contraseña oculto
+            with st.expander("🛠️ Hacer cambios (Modificar o borrar registros)"):
+                clave = st.text_input("Ingresa la clave de administrador para desbloquear la edición:", type="password")
+                
+                if clave == PASSWORD_ADMIN:
+                    st.info("💡 Haz doble clic en una celda para editarla. Para borrar filas completas, selecciónalas marcando el cuadro de la izquierda y presiona 'Supr' en tu teclado.")
+                    
+                    # El editor interactivo de Streamlit
+                    df_editado = st.data_editor(
+                        df_completo, 
+                        num_rows="dynamic", 
+                        use_container_width=True,
+                        key="editor_bd"
+                    )
+                    
+                    boton_guardar_cambios = st.button("🔒 Guardar Cambios en la Nube")
+                    
+                    if boton_guardar_cambios:
+                        try:
+                            # Reemplazamos la tabla de la base de datos con los datos modificados
+                            conn = sqlite3.connect(DB_FILE)
+                            df_editado.to_sql("despachos", conn, if_exists="replace", index=False)
+                            conn.commit()
+                            conn.close()
+                            st.success("✅ ¡Base de datos actualizada con éxito en la nube!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Error al actualizar los cambios: {e}")
+                elif clave != "":
+                    st.error("🔑 Clave incorrecta.")
             
-            # Crear el archivo Excel en memoria para la descarga
+            # Vista normal estática para choferes (No editable)
+            st.dataframe(df_completo.drop(columns=["id"], errors="ignore").head(15), use_container_width=True)
+            
+            # Botón de descarga de siempre usando los últimos datos guardados
+            import io
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                df_visualizar.to_excel(writer, index=False, sheet_name='Despachos')
+                df_completo.drop(columns=["id"], errors="ignore").to_excel(writer, index=False, sheet_name='Despachos')
             
             st.download_button(
                 label="📥 Descargar Base de Datos Completa (Excel)",
@@ -170,5 +190,5 @@ try:
                 file_name="bitacora_despachos_nube.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-except Exception:
-    pass
+except Exception as e:
+    st.error(f"Error de visualización: {e}")
