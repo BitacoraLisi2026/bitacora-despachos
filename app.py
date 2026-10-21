@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timedelta
 
 # Nombre del archivo de Excel
-EXCEL_FILE = r"C:\bit\bitacora_despachos.xlsx"    
+EXCEL_FILE = r"C:\Users\Alex\OneDrive\Documents\BITACORA\bitacora_despachos.xlsx" 
 
 # ==============================================================
 # 📋 CONFIGURA AQUÍ TUS DATOS REALES (Escríbelos dentro de las comillas)
