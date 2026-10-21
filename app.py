@@ -34,7 +34,7 @@ LISTA_CONDUCTORES = [
 PASSWORD_ADMIN = "admin123"
 # ==============================================================
 
-st.set_page_config(page_title="Gestión de Despachos", page_icon="🚚", layout="wide") # Cambiado a layout wide para el informe
+st.set_page_config(page_title="Gestión de Despachos", page_icon="🚚", layout="wide") 
 
 def inicializar_bd():
     conn = sqlite3.connect(DB_FILE)
@@ -92,7 +92,6 @@ try:
             with m3:
                 st.metric(label="🏷️ Total Etiquetas Controladas", value=f"{int(df_informe['cantidad_etiquetas'].sum()):,}")
             with m4:
-                # Clientes únicos atendidos
                 clientes_activos = df_informe['cliente'].nunique()
                 st.metric(label="🏢 Clientes Atendidos", value=clientes_activos)
                 
@@ -103,7 +102,7 @@ try:
             
             with g1:
                 st.markdown("### 🏢 Volumen de Despachos por Cliente")
-                despachos_cliente = df_informe['cliente'].value_index if hasattr(df_informe['cliente'], 'value_index') else df_informe['cliente'].value_counts().reset_index()
+                despachos_cliente = df_informe['cliente'].value_counts().reset_index()
                 despachos_cliente.columns = ['Cliente', 'Documentos']
                 st.bar_chart(data=despachos_cliente, x='Cliente', y='Documentos', color="#1E3A8A")
                 
@@ -122,7 +121,7 @@ except Exception as e:
 st.markdown("---")
 
 # ==============================================================
-# 📥 MÓDULO 2: INGRESO DE DATOS (FORMULARIO ABIERTO)
+# 🚚 MÓDULO 2: INGRESO DE DATOS (FORMULARIO ABIERTO)
 # ==============================================================
 st.markdown("<h2 style='font-size: 24px; margin-bottom: 0px;'>🚚 Registro de Nuevos Despachos</h2>", unsafe_allow_html=True)
 st.write("Área operativa para la digitación en terreno desde dispositivos móviles o PC.")
@@ -222,5 +221,7 @@ try:
             # Vista normal estática para choferes
             st.dataframe(df_completo.drop(columns=["id"], errors="ignore").head(10), use_container_width=True)
             
-            # Botón de descarga
+            # Botón de descarga corregido dentro de la lógica del try
             buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                df_completo.drop(columns=["id"], errors="ignore").to_excel(writer, index=False, sheet_name='Despachos')
