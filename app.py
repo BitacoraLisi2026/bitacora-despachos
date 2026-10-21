@@ -187,41 +187,51 @@ if boton_guardar:
 # ==============================================================
 # ⚙️ MÓDULO 3: HISTORIAL, CONTROL DE DATOS Y DESCARGA
 # ==============================================================
+df_completo = pd.DataFrame()
+
 try:
     if os.path.exists(DB_FILE):
         conn = sqlite3.connect(DB_FILE)
         df_completo = pd.read_sql_query("SELECT * FROM despachos ORDER BY id DESC;", conn)
         conn.close()
+except Exception as e:
+    st.error(f"Error al leer la base de datos: {e}")
+
+if not df_completo.empty:
+    st.markdown("---")
+    st.subheader("📋 Últimos despachos registrados")
+    
+    with st.expander("🛠️ Panel de Administración (Modificar o borrar registros)"):
+        clave = st.text_input("Ingresa la clave de administrador para desbloquear la edición:", type="password")
         
-        if not df_completo.empty:
-            st.markdown("---")
-            st.subheader("📋 Últimos despachos registrados")
+        if clave == PASSWORD_ADMIN:
+            st.info("💡 Haz doble clic en una celda para editarla. Para borrar filas completas, selecciónalas y presiona 'Supr'.")
+            df_editado = st.data_editor(df_completo, num_rows="dynamic", use_container_width=True, key="editor_bd")
+            boton_guardar_cambios = st.button("🔒 Guardar Cambios en la Nube")
             
-            with st.expander("🛠️ Panel de Administración (Modificar o borrar registros)"):
-                clave = st.text_input("Ingresa la clave de administrador para desbloquear la edición:", type="password")
-                
-                if clave == PASSWORD_ADMIN:
-                    st.info("💡 Haz doble clic en una celda para editarla. Para borrar filas completas, selecciónalas y presiona 'Supr'.")
-                    df_editado = st.data_editor(df_completo, num_rows="dynamic", use_container_width=True, key="editor_bd")
-                    boton_guardar_cambios = st.button("🔒 Guardar Cambios en la Nube")
-                    
-                    if boton_guardar_cambios:
-                        try:
-                            conn = sqlite3.connect(DB_FILE)
-                            df_editado.to_sql("despachos", conn, if_exists="replace", index=False)
-                            conn.commit()
-                            conn.close()
-                            st.success("✅ ¡Base de datos actualizada con éxito en la nube!")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ Error al actualizar los cambios: {e}")
-                elif clave != "":
-                    st.error("🔑 Clave incorrecta.")
-            
-            # Vista normal estática para choferes
-            st.dataframe(df_completo.drop(columns=["id"], errors="ignore").head(10), use_container_width=True)
-            
-            # Botón de descarga corregido dentro de la lógica del try
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                df_completo.drop(columns=["id"], errors="ignore").to_excel(writer, index=False, sheet_name='Despachos')
+            if boton_guardar_cambios:
+                try:
+                    conn = sqlite3.connect(DB_FILE)
+                    df_editado.to_sql("despachos", conn, if_exists="replace", index=False)
+                    conn.commit()
+                    conn.close()
+                    st.success("✅ ¡Base de datos actualizada con éxito en la nube!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Error al actualizar los cambios: {e}")
+        elif clave != "":
+            st.error("🔑 Clave incorrecta.")
+    
+    # Vista normal estática para usuarios generales
+    df_visualizar = df_completo.drop(columns=["id"], errors="ignore")
+    st.dataframe(df_visualizar.head(10), use_container_width=True)
+    
+    # Descarga de Excel de forma segura en memoria
+    try:
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df_visualizar.to_excel(writer, index=False, sheet_name='Despachos')
+        
+        st.download_button(
+            label="📥 Descargar Base de Datos Completa (Excel)",
+            data=buffer.getvalue(),
