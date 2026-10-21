@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import os
-import io
 from datetime import datetime
 
 # Archivo de la base de datos fija en la nube
@@ -83,10 +82,9 @@ try:
         conn.close()
         
         if not df_informe.empty:
-            # 1. Fila de Tarjetas de Métricas Ejecutivas
             m1, m2, m3, m4 = st.columns(4)
             with m1:
-                st.metric(label="📄 Total Documentos Procesados", value=f"{len(df_informe)} guías/facturas")
+                st.metric(label="📄 Total Documentos Procesados", value=f"{len(df_informe)} guías")
             with m2:
                 st.metric(label="📦 Total Cajas Distribuidas", value=f"{int(df_informe['cantidad_cajas'].sum()):,}")
             with m3:
@@ -96,8 +94,6 @@ try:
                 st.metric(label="🏢 Clientes Atendidos", value=clientes_activos)
                 
             st.markdown("---")
-            
-            # 2. Fila de Gráficos Estadísticos
             g1, g2 = st.columns(2)
             
             with g1:
@@ -111,8 +107,6 @@ try:
                 despachos_conductor = df_informe['conductor'].value_counts().reset_index()
                 despachos_conductor.columns = ['Conductor', 'Despachos']
                 st.bar_chart(data=despachos_conductor, x='Conductor', y='Despachos', color="#10B981")
-                
-            st.markdown("<br>", unsafe_allow_html=True)
         else:
             st.info("ℹ️ Esperando los primeros registros para construir el informe estadístico gerencial.")
 except Exception as e:
@@ -185,17 +179,17 @@ if boton_guardar:
             st.error(f"❌ Error al guardar: {e}")
 
 # ==============================================================
-# ⚙️ MÓDULO 3: HISTORIAL, CONTROL DE DATOS Y DESCARGA
+# ⚙️ MÓDULO 3: HISTORIAL Y CONTROL DE DATOS
 # ==============================================================
 df_completo = pd.DataFrame()
 
-try:
-    if os.path.exists(DB_FILE):
+if os.path.exists(DB_FILE):
+    try:
         conn = sqlite3.connect(DB_FILE)
         df_completo = pd.read_sql_query("SELECT * FROM despachos ORDER BY id DESC;", conn)
         conn.close()
-except Exception as e:
-    st.error(f"Error al leer la base de datos: {e}")
+    except Exception:
+        pass
 
 if not df_completo.empty:
     st.markdown("---")
@@ -222,16 +216,10 @@ if not df_completo.empty:
         elif clave != "":
             st.error("🔑 Clave incorrecta.")
     
-    # Vista normal estática para usuarios generales
+    # Vista estática para operarios
     df_visualizar = df_completo.drop(columns=["id"], errors="ignore")
     st.dataframe(df_visualizar.head(10), use_container_width=True)
     
-    # Conversión segura y aislada en una función nativa limpia de Python
-    def generar_excel_descarga(dataframe_input):
-        output_buffer = io.BytesIO()
-        dataframe_input.to_excel(output_buffer, index=False, engine="openpyxl")
-        return output_buffer.getvalue()
-        
-    excel_listo = generar_excel_descarga(df_visualizar)
-    
-    st.download_button(
+    # BOTÓN DE DESCARGA DIRECTO DE RESPALDO (Sin funciones intermedias fallidas)
+    with open(DB_FILE, "rb") as archivo_db:
+        st.download_button(label="📥 Descargar Base de Datos de Respaldo (.db)", data=archivo_db, file_name="respaldo_bitacora.db")
