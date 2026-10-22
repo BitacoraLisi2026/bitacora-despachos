@@ -5,232 +5,87 @@ import os
 import io
 from datetime import datetime
 
-# Librerías de diseño estético para Excel
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
-
 DB_FILE = "data.db"
 
-# ==============================================================
-# 📋 CONFIGURACIÓN DE DATOS MAESTROS
-# ==============================================================
-LISTA_CLIENTES = [
-    "Selecciona un cliente...", 
-    "VIÑEDOS DE AGUIRRE", "VIÑA CASADONOSO", "VIÑA AROMO",
-    "VIÑA CASA SOLIS", "VIÑA CONCHA Y TORO", 
-    "VIÑA LUIS FELIPE EDWARDS", "TRANSPORTES COLCHAGUA"
-]
-
-LISTA_RECEIPCION = [
-    "Selecciona quién recibe...", 
-    "CAMILA VILLASANA", "OLGA GONZALEZ", "JORGE DIAZ",
-    "JAVIERA RAMIREZ", "ENCARGADO COLCHAGUA"
-]
-
-LISTA_CONDUCTORES = [
-    "Selecciona el conductor o transporte...",
-    "ELIZABETH",              
-    "ELIZABETH - COLCHAGUA",  
-    "CHILEXPRESS", "STARKEN", "FEDEX", "BLUE EXPRESS", "OTRO EXTERNO"
-]
-
-PASSWORD_ADMIN = "admin123"
-
-# ==============================================================
-# 🗄️ INICIALIZACIÓN DE BASE DE DATOS
-# ==============================================================
+# 1. BASE DE DATOS ULTRA LIMPIA
 def inicializar_bd():
     conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS despachos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fecha TEXT,
-            hora_despacho TEXT,
-            hora_llegada TEXT,
-            conductor TEXT,
-            orden_trabajo TEXT,
-            cliente TEXT,
-            cantidad_etiquetas INTEGER,
-            cantidad_cajas INTEGER,
-            factura_guia TEXT,
-            recepcionado_por TEXT
+            fecha TEXT, hora_despacho TEXT, hora_llegada TEXT,
+            conductor TEXT, orden_trabajo TEXT, cliente TEXT,
+            cantidad_etiquetas INTEGER, cantidad_cajas INTEGER,
+            factura_guia TEXT, recepcionado_por TEXT
         );
     """)
-    conn.commit()
     conn.close()
 
 inicializar_bd()
 
-# --- Zona Horaria Local (Chile) ---
-try:
-    import zoneinfo
-    zona_horaria = zoneinfo.ZoneInfo("America/Santiago") 
-    hora_local_dt = datetime.now(zona_horaria)
-except Exception:
-    hora_local_dt = datetime.now()
+# 2. CONFIGURACIÓN DE PÁGINA
+st.set_page_config(page_title="Control de Despachos", layout="centered")
+st.title("🚚 Registro de Despachos")
 
-fecha_actual = hora_local_dt.date()
-hora_actual = hora_local_dt.time()
-
-# Configuración de página de Streamlit
-st.set_page_config(page_title="Control de Despachos", page_icon="🚚", layout="centered") 
-
-# ==============================================================
-# 🚚 MÓDULO 1: INGRESO DE DATOS (FORMULARIO OPERATIVO)
-# ==============================================================
-st.markdown("<h1 style='font-size: 28px; color: #1E3A8A; margin-bottom: 5px;'>🚚 Registro de Despachos Logísticos</h1>", unsafe_allow_html=True)
-st.write("Complete el formulario para alimentar la bitácora y generar las planillas de descarga.")
-
-with st.form(key="formulario_bitacora", clear_on_submit=True):
+# 3. FORMULARIO DE INGRESO
+with st.form(key="formulario", clear_on_submit=True):
     col1, col2, col3 = st.columns(3)
-    with col1: fecha = st.date_input("Fecha", value=fecha_actual)
-    with col2: hora_despacho = st.time_input("Hora Despacho", value=hora_actual)
-    with col3: hora_llegada = st.time_input("Hora Llegada", value=hora_actual)
+    fecha = col1.date_input("Fecha")
+    hora_despacho = col2.time_input("Hora Despacho")
+    hora_llegada = col3.time_input("Hora Llegada")
         
-    st.markdown("---")
+    conductor = st.selectbox("Conductor / Transporte", ["ELIZABETH", "ELIZABETH - COLCHAGUA", "CHILEXPRESS", "STARKEN", "FEDEX", "BLUE EXPRESS", "OTRO EXTERNO"])
+    orden_trabajo = st.text_input("Orden de Trabajo (OT)")
+    cliente = st.selectbox("Cliente (Remitente)", ["VIÑEDOS DE AGUIRRE", "VIÑA CASADONOSO", "VIÑA AROMO", "VIÑA CASA SOLIS", "VIÑA CONCHA Y TORO", "VIÑA LUIS FELIPE EDWARDS", "TRANSPORTES COLCHAGUA"])
+    facturas_guias_texto = st.text_area("Facturas o Guías (Una por línea)")
+        
     col4, col5 = st.columns(2)
-    with col4:
-        conductor = st.selectbox("Conductor / Transporte", options=LISTA_CONDUCTORES)
-        orden_trabajo = st.text_input("Orden de Trabajo (OT)")
-    with col5:
-        cliente = st.selectbox("Cliente (Remitente)", options=LISTA_CLIENTES)
-        facturas_guias_texto = st.text_area("Facturas o Guías (Una por línea)")
+    cant_etiquetas = col4.number_input("Cantidad de Etiquetas", min_value=0, step=1)
+    cant_cajas = col5.number_input("Cantidad de Cajas", min_value=0, step=1)
         
-    st.markdown("---")
-    col6, col7 = st.columns(2)
-    with col6: cant_etiquetas = st.number_input("Cantidad de Etiquetas", min_value=0, step=1)
-    with col7: cant_cajas = st.number_input("Cantidad de Cajas", min_value=0, step=1)
-        
-    recepcionado_por = st.selectbox("Recepcionado Por", options=LISTA_RECEIPCION)
+    recepcionado_por = st.selectbox("Recepcionado Por", ["CAMILA VILLASANA", "OLGA GONZALEZ", "JORGE DIAZ", "JAVIERA RAMIREZ", "ENCARGADO COLCHAGUA"])
     
-    boton_guardar = st.form_submit_button(label="💾 Registrar en Bitácora")
+    boton_guardar = st.form_submit_button(label="💾 Registrar Despacho")
 
+# 4. LÓGICA DE GUARDADO
 if boton_guardar:
     lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
-    if conductor == "Selecciona el conductor o transporte..." or cliente == "Selecciona un cliente..." or not lista_documentos or recepcionado_por == "Selecciona quién recibe...":
-        st.error("⚠️ Por favor, rellena todos los campos obligatorios del formulario.")
+    if not lista_documentos:
+        st.error("⚠️ Por favor, ingresa al menos una factura o guía.")
     else:
-        try:
-            conn = sqlite3.connect(DB_FILE)
-            cursor = conn.cursor()
-            for doc in lista_documentos:
-                cursor.execute(
-                    """
-                    INSERT INTO despachos (
-                        fecha, hora_despacho, hora_llegada, conductor, 
-                        orden_trabajo, cliente, cantidad_etiquetas, 
-                        cantidad_cajas, factura_guia, recepcionado_por
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                    """,
-                    (fecha.strftime("%Y-%m-%d"), hora_despacho.strftime("%H:%M"), hora_llegada.strftime("%H:%M"),
-                     conductor, orden_trabajo, cliente, int(cant_etiquetas), int(cant_cajas), doc, recepcionado_por)
-                )
-            conn.commit()
-            conn.close()
-            st.success("✅ Despacho guardado correctamente.")
-            st.rerun()
-        except Exception as e:
-            st.error(f"❌ Error al guardar: {e}")
-
-# ==============================================================
-# ⚙️ MÓDULO 2: DESCARGA DE REPORTE EXCEL CORPORATIVO Y ADMIN
-# ==============================================================
-df_completo = pd.DataFrame()
-if os.path.exists(DB_FILE):
-    try:
         conn = sqlite3.connect(DB_FILE)
-        df_completo = pd.read_sql_query("SELECT * FROM despachos ORDER BY fecha DESC, id DESC;", conn)
+        cursor = conn.cursor()
+        for doc in lista_documentos:
+            cursor.execute("""
+                INSERT INTO despachos (fecha, hora_despacho, hora_llegada, conductor, orden_trabajo, cliente, cantidad_etiquetas, cantidad_cajas, factura_guia, recepcionado_por)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """, (fecha.strftime("%Y-%m-%d"), hora_despacho.strftime("%H:%M"), hora_llegada.strftime("%H:%M"), conductor, orden_trabajo, cliente, int(cant_etiquetas), int(cant_cajas), doc, recepcionado_por))
+        conn.commit()
         conn.close()
-    except Exception:
-        pass
+        st.success("✅ ¡Despacho registrado!")
+        st.rerun()
 
-if not df_completo.empty:
-    st.markdown("---")
-    st.markdown("<h3 style='font-size: 20px; color: #2C3E50;'>📥 Descarga de Archivos</h3>", unsafe_allow_html=True)
-    
-    output = io.BytesIO()
-    
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_excel = df_completo.drop(columns=["id"], errors="ignore")
-        df_excel.columns = [col.replace('_', ' ').title() for col in df_excel.columns]
-        
-        df_excel.to_excel(writer, sheet_name='Bitácora Despachos', index=False, startrow=4)
-        
-        workbook = writer.book
-        worksheet = workbook['Bitácora Despachos']
-        
-        font_titulo = Font(name="Segoe UI", size=16, bold=True, color="1E3A8A")
-        font_subtitulo = Font(name="Segoe UI", size=10, italic=True, color="555555")
-        font_cabecera = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
-        font_cuerpo = Font(name="Segoe UI", size=11, color="000000")
-        
-        fill_cabecera = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
-        fill_cebra = PatternFill(start_color="F2F4F8", end_color="F2F4F8", fill_type="solid")
-        
-        border_fino = Side(border_style="thin", color="D3D3D3")
-        border_celda = Border(left=border_fino, right=border_fino, top=border_fino, bottom=border_fino)
-        
-        worksheet['A1'] = "REPORTE CORPORATIVO DE DESPACHOS"
-        worksheet['A1'].font = font_titulo
-        
-        worksheet['A2'] = f"Generado el: {fecha_actual.strftime('%d/%m/%Y')} | Registros totales: {len(df_excel)}"
-        worksheet['A2'].font = font_subtitulo
-        
-        # Diseño de cabeceras de tabla
-        for col_num in range(1, len(df_excel.columns) + 1):
-            cell = worksheet.cell(row=5, column=col_num)
-            cell.fill = fill_cabecera
-            cell.font = font_cabecera
-            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-            cell.border = border_celda
-        
-        # Formateo estricto fila por fila
-        for r_idx in range(6, worksheet.max_row + 1):
-            worksheet.row_dimensions[r_idx].height = 20
-            aplicar_cebra = (r_idx % 2 == 0)
-            
-            for c_idx in range(1, len(df_excel.columns) + 1):
-                cell = worksheet.cell(row=r_idx, column=c_idx)
-                cell.font = font_cuerpo
-                cell.border = border_celda
-                
-                if aplicar_cebra:
-                    cell.fill = fill_cebra
-                
-                nombre_columna = df_excel.columns[c_idx - 1]
-                
-                if nombre_columna in ["Cantidad Etiquetas", "Cantidad Cajas"]:
-                    cell.number_format = '#,##0'
-                    cell.alignment = Alignment(horizontal="right", vertical="center")
-                elif nombre_columna in ["Fecha", "Hora Despacho", "Hora Llegada"]:
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                else:
-                    cell.alignment = Alignment(horizontal="left", vertical="center")
-                    
-        worksheet.row_dimensions.height = 28
-        
-        # Autoajuste seguro usando índices numéricos
-        for col_idx in range(1, len(df_excel.columns) + 1):
-            max_len = 0
-            col_letter = get_column_letter(col_idx)
-            for row_idx in range(5, worksheet.max_row + 1):
-                cell_value = worksheet.cell(row=row_idx, column=col_idx).value
-                if cell_value:
-                    max_len = max(max_len, len(str(cell_value)))
-            worksheet.column_dimensions[col_letter].width = max(max_len + 4, 13)
+# 5. DESCARGA DIRECTA A EXCEL (SIN COMPLICACIONES)
+if os.path.exists(DB_FILE):
+    conn = sqlite3.connect(DB_FILE)
+    df = pd.read_sql_query("SELECT fecha, hora_despacho, hora_llegada, conductor, orden_trabajo, cliente, cantidad_etiquetas, cantidad_cajas, factura_guia, recepcionado_por FROM despachos ORDER BY id DESC;", conn)
+    conn.close()
 
-    excel_data = output.getvalue()
-
-    st.download_button(
-        label="📥 Descargar Reporte Excel Elegante",
-        data=excel_data,
-        file_name=f"Reporte_Despachos_{fecha_actual}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
-    )
-
-    # El panel administrativo ahora se encuentra correctamente indentado dentro del bloque principal
-    with st.expander("🛠️ Panel Administrativo (Modificar / Eliminar Datos)"):
-        clave = st.text_input("Contraseña de administrador:", type="password")
-        if clave == PASSWORD_ADMIN:
+    if not df.empty:
+        st.markdown("---")
+        
+        # Cambiar nombres de columnas a algo limpio para el Excel
+        df.columns = ["Fecha", "Hora Despacho", "Hora Llegada", "Conductor", "OT", "Cliente", "Etiquetas", "Cajas", "Factura / Guía", "Recepcionado Por"]
+        
+        # Crear el archivo Excel en memoria
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Despachos', index=False)
+        
+        st.download_button(
+            label="📥 Descargar Reporte Excel",
+            data=output.getvalue(),
+            file_name=f"Reporte_Despachos.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
