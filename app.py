@@ -235,17 +235,3 @@ if not df_completo.empty:
         clave = st.text_input("Contraseña de administrador:", type="password")
         if clave == PASSWORD_ADMIN:
             df_editado = st.data_editor(df_completo, num_rows="dynamic", use_container_width=True, key="editor_bd")
-
-
-if st.button("🔒 Confirmar y Actualizar Registros"):
-try:
-conn = sqlite3.connect(DB_FILE)
-df_editado.to_sql("despachos", conn, if_exists="replace", index=False)
-conn.commit()
-conn.close()
-st.success("✅ Base de datos sincronizada.")
-st.rerun()
-except Exception as e:
-st.error(f"❌ Error al actualizar: {e}")
-elif clave != "":
-st.error("🔑 Contraseña incorrecta.")
