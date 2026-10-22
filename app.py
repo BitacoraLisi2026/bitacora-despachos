@@ -157,7 +157,7 @@ if not df_completo.empty:
         df_excel = df_completo.drop(columns=["id"], errors="ignore")
         df_excel.columns = [col.replace('_', ' ').title() for col in df_excel.columns]
         
-        # Exportar datos base
+        # Exportar datos base dejando espacio arriba para el membrete corporativo
         df_excel.to_excel(writer, sheet_name='Bitácora Despachos', index=False, startrow=4)
         
         workbook = writer.book
@@ -179,10 +179,10 @@ if not df_completo.empty:
         worksheet['A1'] = "REPORTE CORPORATIVO DE DESPACHOS"
         worksheet['A1'].font = font_titulo
         
-        worksheet['A2'] = f"Generado automáticamente el: {fecha_actual.strftime('%d/%m/%Y')} | Registros totales: {len(df_excel)}"
+        worksheet['A2'] = f"Generado el: {fecha_actual.strftime('%d/%m/%Y')} | Registros totales: {len(df_excel)}"
         worksheet['A2'].font = font_subtitulo
         
-        # Estilizar la fila de cabecera de la tabla (Fila 5 debido al desplace startrow=4)
+        # Estilizar la fila de cabecera de la tabla (Fila 5)
         for col_num in range(1, len(df_excel.columns) + 1):
             cell = worksheet.cell(row=5, column=col_num)
             cell.fill = fill_cabecera
@@ -190,9 +190,8 @@ if not df_completo.empty:
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
             cell.border = border_celda
         
-        # Estilizar el cuerpo de los datos (Desde la fila 6 hacia adelante)
+        # Estilizar el cuerpo de los datos (Desde la fila 6)
         for row_idx, row in enumerate(worksheet.iter_rows(min_row=6, max_row=worksheet.max_row, min_col=1, max_col=len(df_excel.columns)), start=6):
-            # Efecto cebra para filas pares
             aplicar_cebra = (row_idx % 2 == 0)
             
             for cell in row:
@@ -201,11 +200,14 @@ if not df_completo.empty:
                 if aplicar_cebra:
                     cell.fill = fill_cebra
                 
-                # Alineación y formatos según el tipo de dato
+                # Obtener el nombre de la columna para la alineación
+                nombre_columna = df_excel.columns[cell.column - 1]
+                
+                # Alineación y formatos según el tipo de columna o dato
                 if isinstance(cell.value, (int, float)):
                     cell.number_format = '#,##0'
                     cell.alignment = Alignment(horizontal="right", vertical="center")
-                elif cell.column in: # Columnas de Fecha y Horas
+                elif nombre_columna in ["Fecha", "Hora Despacho", "Hora Llegada"]:
                     cell.alignment = Alignment(horizontal="center", vertical="center")
                 else:
                     cell.alignment = Alignment(horizontal="left", vertical="center")
@@ -219,7 +221,6 @@ if not df_completo.empty:
         for col in worksheet.columns:
             max_len = 0
             col_letter = get_column_letter(col.column)
-            # Ignorar las filas de títulos superiores para no falsear el ancho
             for cell in col:
                 if cell.row >= 5 and cell.value:
                     max_len = max(max_len, len(str(cell.value)))
@@ -228,4 +229,3 @@ if not df_completo.empty:
     # Botón Destacado de Descarga
     st.download_button(
         label="📥 Descargar Reporte Excel Elegante",
-        data=output.getvalue(),
