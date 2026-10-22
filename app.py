@@ -12,7 +12,7 @@ from openpyxl.utils import get_column_letter
 DB_FILE = "data.db"
 
 # ==============================================================
-# 📋 CONFIGURA AQUÍ TUS DATOS REALES
+# 📋 CONFIGURACIÓN DE DATOS MAESTROS
 # ==============================================================
 LISTA_CLIENTES = [
     "Selecciona un cliente...", 
@@ -35,10 +35,10 @@ LISTA_CONDUCTORES = [
 ]
 
 PASSWORD_ADMIN = "admin123"
+
 # ==============================================================
-
-st.set_page_config(page_title="Gestión de Despachos", page_icon="🚚", layout="wide") 
-
+# 🗄️ INICIALIZACIÓN DE BASE DE DATOS
+# ==============================================================
 def inicializar_bd():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -62,7 +62,7 @@ def inicializar_bd():
 
 inicializar_bd()
 
-# --- AJUSTE DE HORA LOCAL (CHILE) ---
+# --- Zona Horaria Local (Chile) ---
 try:
     import zoneinfo
     zona_horaria = zoneinfo.ZoneInfo("America/Santiago") 
@@ -73,47 +73,26 @@ except Exception:
 fecha_actual = hora_local_dt.date()
 hora_actual = hora_local_dt.time()
 
-# ==============================================================
-# 📊 MÓDULO 1: DASHBOARD EJECUTIVO EN LA APP
-# ==============================================================
-st.markdown("<h1 style='font-size: 32px; color: #1E3A8A; margin-bottom: 5px;'>📊 Panel de Gestión e Informe de Despachos</h1>", unsafe_allow_html=True)
-st.write("Resumen ejecutivo del estado de las gestiones y distribución logística en tiempo real.")
-
-df_informe = pd.DataFrame()
-try:
-    if os.path.exists(DB_FILE):
-        conn = sqlite3.connect(DB_FILE)
-        df_informe = pd.read_sql_query("SELECT * FROM despachos;", conn)
-        conn.close()
-        
-        if not df_informe.empty:
-            m1, m2, m3, m4 = st.columns(4)
-            with m1: st.metric(label="📄 Total Documentos Procesados", value=f"{len(df_informe)} guías")
-            with m2: st.metric(label="📦 Total Cajas Distribuidas", value=f"{int(df_informe['cantidad_cajas'].sum()):,}")
-            with m3: st.metric(label="🏷️ Total Etiquetas Controladas", value=f"{int(df_informe['cantidad_etiquetas'].sum()):,}")
-            with m4: st.metric(label="🏢 Clientes Atendidos", value=df_informe['cliente'].nunique())
-except Exception:
-    pass
-
-st.markdown("---")
+# Configuración de página de Streamlit
+st.set_page_config(page_title="Control de Despachos", page_icon="🚚", layout="centered") 
 
 # ==============================================================
-# 🚚 MÓDULO 2: INGRESO DE DATOS (FORMULARIO OPERATIVO)
+# 🚚 MÓDULO 1: INGRESO DE DATOS (FORMULARIO OPERATIVO)
 # ==============================================================
-st.markdown("<h2 style='font-size: 24px; margin-bottom: 0px;'>🚚 Registro de Nuevos Despachos</h2>", unsafe_allow_html=True)
-st.write("Área operativa para la digitación en terreno desde dispositivos móviles o PC.")
+st.markdown("<h1 style='font-size: 28px; color: #1E3A8A; margin-bottom: 5px;'>🚚 Registro de Despachos Logísticos</h1>", unsafe_allow_html=True)
+st.write("Complete el formulario para alimentar la bitácora y generar las planillas de descarga.")
 
 with st.form(key="formulario_bitacora", clear_on_submit=True):
     col1, col2, col3 = st.columns(3)
     with col1: fecha = st.date_input("Fecha", value=fecha_actual)
-    with col2: hora_despacho = st.time_input("Hora de Despacho", value=hora_actual)
-    with col3: hora_llegada = st.time_input("Hora de Llegada", value=hora_actual)
+    with col2: hora_despacho = st.time_input("Hora Despacho", value=hora_actual)
+    with col3: hora_llegada = st.time_input("Hora Llegada", value=hora_actual)
         
     st.markdown("---")
     col4, col5 = st.columns(2)
     with col4:
-        conductor = st.selectbox("Conductor / Empresa de Transporte", options=LISTA_CONDUCTORES)
-        orden_trabajo = st.text_input("Orden de Trabajo")
+        conductor = st.selectbox("Conductor / Transporte", options=LISTA_CONDUCTORES)
+        orden_trabajo = st.text_input("Orden de Trabajo (OT)")
     with col5:
         cliente = st.selectbox("Cliente (Remitente)", options=LISTA_CLIENTES)
         facturas_guias_texto = st.text_area("Facturas o Guías (Una por línea)")
@@ -125,7 +104,7 @@ with st.form(key="formulario_bitacora", clear_on_submit=True):
         
     recepcionado_por = st.selectbox("Recepcionado Por", options=LISTA_RECEIPCION)
     
-    boton_guardar = st.form_submit_button(label="💾 Registrar Despacho")
+    boton_guardar = st.form_submit_button(label="💾 Registrar en Bitácora")
 
 if boton_guardar:
     lista_documentos = [linea.strip() for linea in facturas_guias_texto.split("\n") if linea.strip()]
@@ -149,81 +128,104 @@ if boton_guardar:
                 )
             conn.commit()
             conn.close()
-            st.success("✅ ¡Despacho registrado en la nube!")
+            st.success("✅ Despacho guardado correctamente.")
             st.rerun()
         except Exception as e:
             st.error(f"❌ Error al guardar: {e}")
 
 # ==============================================================
-# ⚙️ MÓDULO 3: VISTA DE REGISTROS Y EXPORTACIÓN CORPORATIVA EXCEL
+# ⚙️ MÓDULO 2: DESCARGA DE REPORTE EXCEL CORPORATIVO
 # ==============================================================
 df_completo = pd.DataFrame()
 if os.path.exists(DB_FILE):
     try:
         conn = sqlite3.connect(DB_FILE)
-        df_completo = pd.read_sql_query("SELECT * FROM despachos ORDER BY id DESC;", conn)
+        df_completo = pd.read_sql_query("SELECT * FROM despachos ORDER BY fecha DESC, id DESC;", conn)
         conn.close()
     except Exception:
         pass
 
 if not df_completo.empty:
     st.markdown("---")
-    st.subheader("📋 Últimos despachos registrados")
+    st.markdown("<h3 style='font-size: 20px; color: #2C3E50;'>📥 Descarga de Archivos</h3>", unsafe_allow_html=True)
     
-    with st.expander("🛠️ Panel de Administración (Modificar o borrar registros)"):
-        clave = st.text_input("Ingresa la clave de administrador para desbloquear la edición:", type="password")
-        if clave == PASSWORD_ADMIN:
-            df_editado = st.data_editor(df_completo, num_rows="dynamic", use_container_width=True, key="editor_bd")
-            if st.button("🔒 Guardar Cambios en la Nube"):
-                try:
-                    conn = sqlite3.connect(DB_FILE)
-                    df_editado.to_sql("despachos", conn, if_exists="replace", index=False)
-                    conn.commit()
-                    conn.close()
-                    st.success("✅ ¡Base de datos actualizada con éxito!")
-                    st.rerun()
-                except Exception as e: st.error(f"❌ Error: {e}")
-        elif clave != "": st.error("🔑 Clave incorrecta.")
-    
-    df_visualizar = df_completo.drop(columns=["id"], errors="ignore")
-    st.dataframe(df_visualizar.head(10), use_container_width=True)
-
-    # 📥 GENERADOR EXCLUSIVO DE REPORTE EXCEL ELEGANTE (OPENPYXL)
+    # 🎨 CONSTRUCCIÓN DEL EXCEL ELEGANTE CON OPENPYXL
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # Pestaña 2: Detalle de Datos base
-        df_visualizar.to_excel(writer, sheet_name='Detalle Despachos', index=False)
         
-        # Pestaña 1: Resumen Ejecutivo (Dashboard en Excel)
+        # Limpieza de columnas internas para el reporte corporativo
+        df_excel = df_completo.drop(columns=["id"], errors="ignore")
+        df_excel.columns = [col.replace('_', ' ').title() for col in df_excel.columns]
+        
+        # Exportar datos base
+        df_excel.to_excel(writer, sheet_name='Bitácora Despachos', index=False, startrow=4)
+        
         workbook = writer.book
-        ws_dash = workbook.create_sheet(title="Resumen Ejecutivo", index=0)
-        ws_dash.views.sheetView[0].showGridLines = True
-        ws_det = writer.sheets['Detalle Despachos']
-        ws_det.views.sheetView[0].showGridLines = True
-
-        # Estilos Corporativos (Azul Marino y Gris Ejecutivo)
-        font_titulo = Font(name='Segoe UI', size=16, bold=True, color='1E3A8A')
-        font_subtitulo = Font(name='Segoe UI', size=11, italic=True, color='4B5563')
-        font_header = Font(name='Segoe UI', size=11, bold=True, color='FFFFFF')
-        font_kpi_num = Font(name='Segoe UI', size=18, bold=True, color='1E3A8A')
-        font_kpi_lbl = Font(name='Segoe UI', size=9, bold=False, color='374151')
-        font_normal = Font(name='Segoe UI', size=11)
+        worksheet = workbook['Bitácora Despachos']
         
-        fill_azul = PatternFill(start_color='1E3A8A', end_color='1E3A8A', fill_type='solid')
-        fill_kpi = PatternFill(start_color='F3F4F6', end_color='F3F4F6', fill_type='solid')
+        # --- DISEÑO DE ESTILOS ---
+        font_titulo = Font(name="Segoe UI", size=16, bold=True, color="1E3A8A")
+        font_subtitulo = Font(name="Segoe UI", size=10, italic=True, color="555555")
+        font_cabecera = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
+        font_cuerpo = Font(name="Segoe UI", size=11, color="000000")
         
-        align_center = Alignment(horizontal='center', vertical='center')
-        align_left = Alignment(horizontal='left', vertical='center')
-        align_right = Alignment(horizontal='right', vertical='center')
+        fill_cabecera = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
+        fill_cebra = PatternFill(start_color="F2F4F8", end_color="F2F4F8", fill_type="solid")
         
-        borde_delgado = Border(
-            left=Side(style='thin', color='D1D5DB'), right=Side(style='thin', color='D1D5DB'),
-            top=Side(style='thin', color='D1D5DB'), bottom=Side(style='thin', color='D1D5DB')
-        )
+        border_fino = Side(border_style="thin", color="D3D3D3")
+        border_celda = Border(left=border_fino, right=border_fino, top=border_fino, bottom=border_fino)
+        
+        # --- APLICACIÓN DE ENCABEZADOS DE DISEÑO (Banners Superiores) ---
+        worksheet['A1'] = "REPORTE CORPORATIVO DE DESPACHOS"
+        worksheet['A1'].font = font_titulo
+        
+        worksheet['A2'] = f"Generado automáticamente el: {fecha_actual.strftime('%d/%m/%Y')} | Registros totales: {len(df_excel)}"
+        worksheet['A2'].font = font_subtitulo
+        
+        # Estilizar la fila de cabecera de la tabla (Fila 5 debido al desplace startrow=4)
+        for col_num in range(1, len(df_excel.columns) + 1):
+            cell = worksheet.cell(row=5, column=col_num)
+            cell.fill = fill_cabecera
+            cell.font = font_cabecera
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.border = border_celda
+        
+        # Estilizar el cuerpo de los datos (Desde la fila 6 hacia adelante)
+        for row_idx, row in enumerate(worksheet.iter_rows(min_row=6, max_row=worksheet.max_row, min_col=1, max_col=len(df_excel.columns)), start=6):
+            # Efecto cebra para filas pares
+            aplicar_cebra = (row_idx % 2 == 0)
+            
+            for cell in row:
+                cell.font = font_cuerpo
+                cell.border = border_celda
+                if aplicar_cebra:
+                    cell.fill = fill_cebra
+                
+                # Alineación y formatos según el tipo de dato
+                if isinstance(cell.value, (int, float)):
+                    cell.number_format = '#,##0'
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                elif cell.column in: # Columnas de Fecha y Horas
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                else:
+                    cell.alignment = Alignment(horizontal="left", vertical="center")
+                    
+        # Configurar alturas de fila para dar "aire" visual
+        worksheet.row_dimensions[5].height = 28 # Cabecera más alta
+        for r in range(6, worksheet.max_row + 1):
+            worksheet.row_dimensions[r].height = 20 # Filas de datos cómodas
+            
+        # Autoajustar el ancho de las columnas de forma inteligente
+        for col in worksheet.columns:
+            max_len = 0
+            col_letter = get_column_letter(col.column)
+            # Ignorar las filas de títulos superiores para no falsear el ancho
+            for cell in col:
+                if cell.row >= 5 and cell.value:
+                    max_len = max(max_len, len(str(cell.value)))
+            worksheet.column_dimensions[col_letter].width = max(max_len + 4, 13)
 
-        # ---- DISEÑO PESTAÑA: RESUMEN EJECUTIVO ----
-        ws_dash['B2'] = "INFORME GERENCIAL DE GESTIÓN LOGÍSTICA"
-        ws_dash['B2'].font = font_titulo
-        ws_dash['B3'] = f"Reporte automatizado en tiempo real • Generado el {datetime.now().strftime('%d-%m-%Y %H:%M')}"
-        ws_dash['B3'].font = font_subtitulo
-
+    # Botón Destacado de Descarga
+    st.download_button(
+        label="📥 Descargar Reporte Excel Elegante",
+        data=output.getvalue(),
