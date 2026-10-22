@@ -149,21 +149,17 @@ if not df_completo.empty:
     st.markdown("---")
     st.markdown("<h3 style='font-size: 20px; color: #2C3E50;'>📥 Descarga de Archivos</h3>", unsafe_allow_html=True)
     
-    # 🎨 CONSTRUCCIÓN DEL EXCEL ELEGANTE CON OPENPYXL
     output = io.BytesIO()
+    
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        
-        # Limpieza de columnas internas para el reporte corporativo
         df_excel = df_completo.drop(columns=["id"], errors="ignore")
         df_excel.columns = [col.replace('_', ' ').title() for col in df_excel.columns]
         
-        # Exportar datos base dejando espacio arriba para el membrete corporativo
         df_excel.to_excel(writer, sheet_name='Bitácora Despachos', index=False, startrow=4)
         
         workbook = writer.book
         worksheet = workbook['Bitácora Despachos']
         
-        # --- DISEÑO DE ESTILOS ---
         font_titulo = Font(name="Segoe UI", size=16, bold=True, color="1E3A8A")
         font_subtitulo = Font(name="Segoe UI", size=10, italic=True, color="555555")
         font_cabecera = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
@@ -175,14 +171,13 @@ if not df_completo.empty:
         border_fino = Side(border_style="thin", color="D3D3D3")
         border_celda = Border(left=border_fino, right=border_fino, top=border_fino, bottom=border_fino)
         
-        # --- APLICACIÓN DE ENCABEZADOS DE DISEÑO (Banners Superiores) ---
         worksheet['A1'] = "REPORTE CORPORATIVO DE DESPACHOS"
         worksheet['A1'].font = font_titulo
         
         worksheet['A2'] = f"Generado el: {fecha_actual.strftime('%d/%m/%Y')} | Registros totales: {len(df_excel)}"
         worksheet['A2'].font = font_subtitulo
         
-        # Estilizar la fila de cabecera de la tabla (Fila 5)
+        # Diseño de cabeceras de tabla
         for col_num in range(1, len(df_excel.columns) + 1):
             cell = worksheet.cell(row=5, column=col_num)
             cell.fill = fill_cabecera
@@ -190,21 +185,22 @@ if not df_completo.empty:
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
             cell.border = border_celda
         
-        # Estilizar el cuerpo de los datos (Desde la fila 6)
-        for row_idx, row in enumerate(worksheet.iter_rows(min_row=6, max_row=worksheet.max_row, min_col=1, max_col=len(df_excel.columns)), start=6):
-            aplicar_cebra = (row_idx % 2 == 0)
+        # Formateo estricto fila por fila
+        for r_idx in range(6, worksheet.max_row + 1):
+            worksheet.row_dimensions[r_idx].height = 20
+            aplicar_cebra = (r_idx % 2 == 0)
             
-            for cell in row:
+            for c_idx in range(1, len(df_excel.columns) + 1):
+                cell = worksheet.cell(row=r_idx, column=c_idx)
                 cell.font = font_cuerpo
                 cell.border = border_celda
+                
                 if aplicar_cebra:
                     cell.fill = fill_cebra
                 
-                # Obtener el nombre de la columna para la alineación
-                nombre_columna = df_excel.columns[cell.column - 1]
+                nombre_columna = df_excel.columns[c_idx - 1]
                 
-                # Alineación y formatos según el tipo de columna o dato
-                if isinstance(cell.value, (int, float)):
+                if nombre_columna in ["Cantidad Etiquetas", "Cantidad Cajas"]:
                     cell.number_format = '#,##0'
                     cell.alignment = Alignment(horizontal="right", vertical="center")
                 elif nombre_columna in ["Fecha", "Hora Despacho", "Hora Llegada"]:
@@ -212,12 +208,8 @@ if not df_completo.empty:
                 else:
                     cell.alignment = Alignment(horizontal="left", vertical="center")
                     
-        # Configurar alturas de fila para dar "aire" visual
-        worksheet.row_dimensions[5].height = 28 # Cabecera más alta
-        for r in range(6, worksheet.max_row + 1):
-            worksheet.row_dimensions[r].height = 20 # Filas de datos cómodas
-            
-        # Autoajustar el ancho de las columnas de forma inteligente
+        worksheet.row_dimensions[5].height = 28
+        
         for col in worksheet.columns:
             max_len = 0
             col_letter = get_column_letter(col.column)
@@ -226,6 +218,34 @@ if not df_completo.empty:
                     max_len = max(max_len, len(str(cell.value)))
             worksheet.column_dimensions[col_letter].width = max(max_len + 4, 13)
 
-    # Botón Destacado de Descarga
+    excel_data = output.getvalue()
+
     st.download_button(
         label="📥 Descargar Reporte Excel Elegante",
+        data=excel_data,
+        file_name=f"Reporte_Despachos_{fecha_actual}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True
+    )
+
+    # ==============================================================
+    # 🛠️ MÓDULO 3: EDICIÓN O CONTROL ADMINISTRATIVO
+    # ==============================================================
+    with st.expander("🛠️ Panel Administrativo (Modificar / Eliminar Datos)"):
+        clave = st.text_input("Contraseña de administrador:", type="password")
+        if clave == PASSWORD_ADMIN:
+            df_editado = st.data_editor(df_completo, num_rows="dynamic", use_container_width=True, key="editor_bd")
+
+
+if st.button("🔒 Confirmar y Actualizar Registros"):
+try:
+conn = sqlite3.connect(DB_FILE)
+df_editado.to_sql("despachos", conn, if_exists="replace", index=False)
+conn.commit()
+conn.close()
+st.success("✅ Base de datos sincronizada.")
+st.rerun()
+except Exception as e:
+st.error(f"❌ Error al actualizar: {e}")
+elif clave != "":
+st.error("🔑 Contraseña incorrecta.")
