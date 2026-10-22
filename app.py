@@ -134,7 +134,7 @@ if boton_guardar:
             st.error(f"❌ Error al guardar: {e}")
 
 # ==============================================================
-# ⚙️ MÓDULO 2: DESCARGA DE REPORTE EXCEL CORPORATIVO
+# ⚙️ MÓDULO 2: DESCARGA DE REPORTE EXCEL CORPORATIVO Y ADMIN
 # ==============================================================
 df_completo = pd.DataFrame()
 if os.path.exists(DB_FILE):
@@ -210,7 +210,7 @@ if not df_completo.empty:
                     
         worksheet.row_dimensions.height = 28
         
-        # --- AUTOAJUSTE CORREGIDO USANDO ÍNDICES NUMÉRICOS SEGUROS ---
+        # Autoajuste seguro usando índices numéricos
         for col_idx in range(1, len(df_excel.columns) + 1):
             max_len = 0
             col_letter = get_column_letter(col_idx)
@@ -230,7 +230,7 @@ if not df_completo.empty:
         use_container_width=True
     )
 
-    # ==============================================================
-    # 🛠️ MÓDULO 3: EDICIÓN O CONTROL ADMINISTRATIVO
-    # ==============================================================
+    # El panel administrativo ahora se encuentra correctamente indentado dentro del bloque principal
     with st.expander("🛠️ Panel Administrativo (Modificar / Eliminar Datos)"):
+        clave = st.text_input("Contraseña de administrador:", type="password")
+        if clave == PASSWORD_ADMIN:
