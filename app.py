@@ -19,12 +19,21 @@ def inicializar_bd():
             factura_guia TEXT, recepcionado_por TEXT
         );
     """)
+    conn.commit()
     conn.close()
 
 inicializar_bd()
 
 # 2. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Control de Despachos", layout="centered")
+
+# --- 🖼️ AQUÍ SE COLOCA TU LOGO ---
+# Opción A: Si tu logo está en la misma carpeta que este archivo app.py:
+# st.image("logo.png", width=150)
+#
+# Opción B: Si tienes el link de internet de tu imagen (reemplaza esta URL de ejemplo):
+st.image("https://flaticon.com", width=100)
+
 st.title("🚚 Registro de Despachos")
 
 # 3. FORMULARIO DE INGRESO
@@ -65,7 +74,7 @@ if boton_guardar:
         st.success("✅ ¡Despacho registrado!")
         st.rerun()
 
-# 5. DESCARGA DIRECTA A EXCEL (SIN COMPLICACIONES)
+# 5. DESCARGA DIRECTA A EXCEL
 if os.path.exists(DB_FILE):
     conn = sqlite3.connect(DB_FILE)
     df = pd.read_sql_query("SELECT fecha, hora_despacho, hora_llegada, conductor, orden_trabajo, cliente, cantidad_etiquetas, cantidad_cajas, factura_guia, recepcionado_por FROM despachos ORDER BY id DESC;", conn)
@@ -74,10 +83,8 @@ if os.path.exists(DB_FILE):
     if not df.empty:
         st.markdown("---")
         
-        # Cambiar nombres de columnas a algo limpio para el Excel
         df.columns = ["Fecha", "Hora Despacho", "Hora Llegada", "Conductor", "OT", "Cliente", "Etiquetas", "Cajas", "Factura / Guía", "Recepcionado Por"]
         
-        # Crear el archivo Excel en memoria
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, sheet_name='Despachos', index=False)
