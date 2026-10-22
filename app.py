@@ -208,14 +208,16 @@ if not df_completo.empty:
                 else:
                     cell.alignment = Alignment(horizontal="left", vertical="center")
                     
-        worksheet.row_dimensions[5].height = 28
+        worksheet.row_dimensions.height = 28
         
-        for col in worksheet.columns:
+        # --- AUTOAJUSTE CORREGIDO USANDO ÍNDICES NUMÉRICOS SEGUROS ---
+        for col_idx in range(1, len(df_excel.columns) + 1):
             max_len = 0
-            col_letter = get_column_letter(col.column)
-            for cell in col:
-                if cell.row >= 5 and cell.value:
-                    max_len = max(max_len, len(str(cell.value)))
+            col_letter = get_column_letter(col_idx)
+            for row_idx in range(5, worksheet.max_row + 1):
+                cell_value = worksheet.cell(row=row_idx, column=col_idx).value
+                if cell_value:
+                    max_len = max(max_len, len(str(cell_value)))
             worksheet.column_dimensions[col_letter].width = max(max_len + 4, 13)
 
     excel_data = output.getvalue()
@@ -232,6 +234,3 @@ if not df_completo.empty:
     # 🛠️ MÓDULO 3: EDICIÓN O CONTROL ADMINISTRATIVO
     # ==============================================================
     with st.expander("🛠️ Panel Administrativo (Modificar / Eliminar Datos)"):
-        clave = st.text_input("Contraseña de administrador:", type="password")
-        if clave == PASSWORD_ADMIN:
-            df_editado = st.data_editor(df_completo, num_rows="dynamic", use_container_width=True, key="editor_bd")
