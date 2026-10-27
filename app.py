@@ -39,22 +39,22 @@ def cargar_datos():
             "Fecha Registro"
         ])
 
-# Función para guardar registros independientes por cada guía
-def guardar_registro(fecha_salida, cliente, guias_texto, recepciona, tipo_transporte, transporte):
+# Función para guardar registros independientes por cada línea (guía)
+def guardar_registro(fecha_salida, cliente, guias_bloque_texto, recepciona, tipo_transporte, transporte):
     df = cargar_datos()
     ahora = datetime.now()
     
-    # Separamos el texto por comas y limpiamos los espacios en blanco de cada guía
-    lista_guias = [g.strip() for g in guias_texto.split(",") if g.strip()]
+    # Separamos el bloque de texto por saltos de línea y limpiamos espacios vacíos
+    lista_guias = [g.strip() for g in guias_bloque_texto.split("\n") if g.strip()]
     
-    # Creamos una lista de diccionarios (una fila para cada guía)
+    # Creamos una fila independiente en el Excel por cada línea escrita
     nuevas_filas = []
-    for guia in lista_guias:
+    for copia_guia in lista_guias:
         nueva_entrega = {
             "Fecha Salida": fecha_salida.strftime("%Y-%m-%d"),
             "Hora de Entrega": ahora.strftime("%H:%M:%S"),
             "Cliente": cliente,
-            "Guías / Facturas": guia,  # <- Aquí va una sola guía por fila
+            "Guías / Facturas": copia_guia,  # Una guía por fila hacia abajo
             "Quién Recepciona": recepciona,
             "Tipo Transporte": tipo_transporte,
             "Transporte Utilizado": transporte,
@@ -62,7 +62,7 @@ def guardar_registro(fecha_salida, cliente, guias_texto, recepciona, tipo_transp
         }
         nuevas_filas.append(nueva_entrega)
     
-    # Concatenamos todas las nuevas filas creadas hacia abajo
+    # Concatenamos las filas al registro general
     df = pd.concat([df, pd.DataFrame(nuevas_filas)], ignore_index=True)
     df.to_csv(DB_FILE, index=False)
 
@@ -78,7 +78,7 @@ if logo_encontrado:
 st.title("📦 Control de Registro de Entregas")
 st.write("Complete la información detallada de la salida del producto:")
 
-# Formulario de entrada de datos original
+# Formulario de entrada de datos
 with st.form(key="formulario_entrega", clear_on_submit=True):
     
     fecha_salida = st.date_input("Fecha de Salida *", value=date.today())
@@ -87,10 +87,11 @@ with st.form(key="formulario_entrega", clear_on_submit=True):
     with col1:
         cliente = st.text_input("Cliente *")
         
-        # El usuario ingresa las guías separadas por comas de forma simple
-        guias_facturas = st.text_input(
-            "Guías / Facturas *", 
-            placeholder="Ej: 1024, 1025, 1026"
+        # CAMBIO CLAVE: Cuadro grande para listar hacia abajo con ENTER
+        guias_facturas = st.text_area(
+            "Guías / Facturas (Escriba una por línea usando ENTER) *", 
+            placeholder="1024\n1025\n1026",
+            height=120
         )
     
     with col2:
@@ -110,7 +111,7 @@ with st.form(key="formulario_entrega", clear_on_submit=True):
 if boton_guardar:
     if cliente and guias_facturas and recepciona and transporte:
         guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_transporte, transporte)
-        st.success("✅ ¡Entrega registrada! Las guías se han desglosado en filas independientes.")
+        st.success("✅ ¡Entrega registrada! Las guías se guardaron en filas independientes hacia abajo.")
         st.rerun()
     else:
         st.error("⚠️ Por favor, complete todos los campos obligatorios antes de enviar.")
