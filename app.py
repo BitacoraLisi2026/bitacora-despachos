@@ -15,6 +15,9 @@ st.set_page_config(page_title="Registro de Entregas", page_icon="🚚", layout="
 ARCHIVO_EXCEL = "registro_entregas.xlsx"
 NOMBRE_HOJA = "Entregas"
 
+# El logo debe estar en la misma carpeta que app.py (en la raíz del repositorio)
+RUTA_LOGO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png")
+
 ENCABEZADOS = [
     "Fecha de salida",
     "Hora de entrega",
@@ -320,6 +323,11 @@ def guardar_registro():
 # ----------------------------------------------------------------------
 # INTERFAZ
 # ----------------------------------------------------------------------
+if os.path.exists(RUTA_LOGO):
+    col_izq, col_centro, col_der = st.columns([1, 2, 1])
+    with col_centro:
+        st.image(RUTA_LOGO, use_container_width=True)
+
 st.title("🚚 Registro de Entregas")
 st.caption("Completa los datos y guarda. Cada guía se registra en una fila independiente del Excel.")
 
