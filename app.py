@@ -45,6 +45,7 @@ df_actual = cargar_datos()
 # --- OBTENER LISTADO DE CLIENTES (ACTUALIZADO) ---
 # Tu lista oficial de clientes y transportes
 clientes_base = [
+    "Selecciona un cliente...",
     "VIÑEDOS DE AGUIRRE",
     "VIÑA CASADONOSO",
     "VIÑA AROMO",
