@@ -231,28 +231,22 @@ if not df_actual.empty:
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
         df_actual.to_excel(writer, index=False, sheet_name='Bitácora de Despachos')
         
-        # Obtener acceso a la hoja de cálculo generada para aplicar estilos directos
         workbook = writer.book
         worksheet = workbook['Bitácora de Despachos']
         
-        # --- DEFINICIÓN DE ESTILOS ---
         fuente_titulo = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
         fuente_datos = Font(name='Calibri', size=11, bold=False, color='000000')
         
-        # Azul Corporativo para Cabecera y Gris Claro para filas intercaladas
         relleno_titulo = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid')
         relleno_par = PatternFill(start_color='F2F2F2', end_color='F2F2F2', fill_type='solid')
         relleno_impar = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
         
-        # Alineaciones fijas
         alineacion_centro = Alignment(horizontal='center', vertical='center')
         alineacion_izquierda = Alignment(horizontal='left', vertical='center')
         
-        # Bordes finos y limpios
         borde_fino = Side(border_style="thin", color="D9D9D9")
         cuadrícula = Border(left=borde_fino, right=borde_fino, top=borde_fino, bottom=borde_fino)
         
-        # 1. Diseñar la fila del título (Cabecera)
         worksheet.row_dimensions.height = 25
         for col_idx in range(1, worksheet.max_column + 1):
             cell = worksheet.cell(row=1, column=col_idx)
@@ -261,10 +255,17 @@ if not df_actual.empty:
             cell.alignment = alineacion_centro
             cell.border = cuadrícula
             
-        # 2. Diseñar las filas de datos hacia abajo
         for row_idx in range(2, worksheet.max_row + 1):
             worksheet.row_dimensions[row_idx].height = 18
-            
-            # Decidir color intercalado (Zebra)
             relleno_actual = relleno_par if row_idx % 2 == 0 else relleno_impar
+            
             for col_idx in range(1, worksheet.max_column + 1):
+                cell = worksheet.cell(row=row_idx, column=col_idx)
+                cell.font = fuente_datos
+                cell.fill = relleno_actual
+                cell.border = cuadrícula
+                
+                # Modificado a tupla fija para evitar el error de desaparición de texto
+                columnas_centradas = (1, 2, 4, 6, 8)
+                if col_idx in columnas_centradas:
+                    cell.alignment = alineacion_centro
