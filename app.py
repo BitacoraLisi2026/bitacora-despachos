@@ -1,269 +1,411 @@
-import streamlit as st
-import pandas as pd
 import os
-from datetime import datetime, date
-import io
+from datetime import datetime, timedelta, timezone
 
-# Importaciones para el diseño elegante de Excel
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+import pandas as pd
+import streamlit as st
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-# Configuración de la página y el navegador
-st.set_page_config(
-    page_title="Control de Entregas", 
-    page_icon="📦", 
-    layout="centered"
-)
+# ----------------------------------------------------------------------
+# CONFIGURACIÓN GENERAL
+# ----------------------------------------------------------------------
+st.set_page_config(page_title="Registro de Entregas", page_icon="🚚", layout="centered")
 
-# --- CONFIGURACIÓN DEL LOGO ---
-NOMBRES_LOGO = ["logo.png", "logo.jpg", "logo.jpeg"]
-logo_encontrado = None
+ARCHIVO_EXCEL = "registro_entregas.xlsx"
+NOMBRE_HOJA = "Entregas"
 
-for nombre in NOMBRES_LOGO:
-    if os.path.exists(nombre):
-        logo_encontrado = nombre
-        break
+ENCABEZADOS = [
+    "Fecha de salida",
+    "Hora de entrega",
+    "Cliente",
+    "Quién recepciona",
+    "Conductor",
+    "Transporte",
+    "Guía / Factura",
+]
 
-# Nombre del archivo de base de datos local
-DB_FILE = "registro_entregas.csv"
+CLIENTES_BASE = [
+    "Viñedos de Aguirre",
+    "Viña Casadonoso",
+    "Viña Aromo",
+    "Viña Casa Solis",
+    "Viña Concha y Toro",
+    "Viña Luis Felipe Edwards",
+    "Transportes Colchagua",
+]
 
-# Función para cargar los datos existentes sin perder el formato
-def cargar_datos():
-    if os.path.exists(DB_FILE):
+RECEPCIONISTAS_BASE = [
+    "Camila Villasana",
+    "Olga Gonzalez",
+    "Jorge Diaz",
+    "Javiera Ramirez",
+    "Encargado Colchagua",
+]
+
+EMPRESAS_TRANSPORTE_BASE = [
+    "Starken",
+    "Chilexpress",
+    "Correos de Chile",
+    "Blue Express",
+    "Turbus Cargo",
+    "Pullman Cargo",
+]
+
+OPCION_NUEVO = "➕ Agregar nuevo"
+OPCION_OTRA_EMPRESA = "Otra Empresa"
+VEHICULO_INTERNO = "Vehículo Interno"
+
+# Colores del diseño corporativo
+COLOR_AZUL_MARINO = "1F3864"
+COLOR_GRIS_CLARO = "F2F2F2"
+COLOR_BLANCO = "FFFFFF"
+COLOR_BORDE = "BFBFBF"
+
+
+# ----------------------------------------------------------------------
+# UTILIDADES
+# ----------------------------------------------------------------------
+def ahora_chile():
+    """Devuelve la fecha y hora actual de Chile (el servidor de Streamlit Cloud usa UTC)."""
+    try:
+        from zoneinfo import ZoneInfo
+
+        return datetime.now(ZoneInfo("America/Santiago"))
+    except Exception:
+        return datetime.now(timezone(timedelta(hours=-3)))
+
+
+def aplicar_diseno(ws):
+    """Aplica el diseño corporativo: cabecera azul marino y filas zebra gris claro."""
+    borde = Side(style="thin", color=COLOR_BORDE)
+    borde_celda = Border(left=borde, right=borde, top=borde, bottom=borde)
+
+    relleno_cabecera = PatternFill(
+        start_color=COLOR_AZUL_MARINO, end_color=COLOR_AZUL_MARINO, fill_type="solid"
+    )
+    relleno_gris = PatternFill(
+        start_color=COLOR_GRIS_CLARO, end_color=COLOR_GRIS_CLARO, fill_type="solid"
+    )
+    relleno_blanco = PatternFill(
+        start_color=COLOR_BLANCO, end_color=COLOR_BLANCO, fill_type="solid"
+    )
+
+    fuente_cabecera = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
+    fuente_normal = Font(name="Calibri", size=11, color="000000")
+
+    # Cabecera
+    for celda in ws[1]:
+        celda.fill = relleno_cabecera
+        celda.font = fuente_cabecera
+        celda.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        celda.border = borde_celda
+    ws.row_dimensions[1].height = 28
+
+    # Filas de datos con efecto zebra
+    for idx_fila in range(2, ws.max_row + 1):
+        relleno = relleno_gris if idx_fila % 2 == 0 else relleno_blanco
+        for celda in ws[idx_fila]:
+            celda.fill = relleno
+            celda.font = fuente_normal
+            celda.border = borde_celda
+            celda.alignment = Alignment(horizontal="center", vertical="center")
+        # Formato de fecha en la columna A
+        ws.cell(row=idx_fila, column=1).number_format = "DD/MM/YYYY"
+        ws.row_dimensions[idx_fila].height = 20
+
+    # Ancho de columnas según contenido
+    for idx_col in range(1, ws.max_column + 1):
+        letra = get_column_letter(idx_col)
+        largo_max = 0
+        for celda in ws[letra]:
+            if celda.value is not None:
+                valor = (
+                    celda.value.strftime("%d/%m/%Y")
+                    if hasattr(celda.value, "strftime") and idx_col == 1
+                    else str(celda.value)
+                )
+                largo_max = max(largo_max, len(valor))
+        ws.column_dimensions[letra].width = min(max(largo_max + 4, 16), 45)
+
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
+
+
+def crear_libro_nuevo():
+    wb = Workbook()
+    ws = wb.active
+    ws.title = NOMBRE_HOJA
+    ws.append(ENCABEZADOS)
+    return wb
+
+
+def abrir_libro():
+    """Abre el Excel existente o crea uno nuevo si aún no existe."""
+    if os.path.exists(ARCHIVO_EXCEL):
         try:
-            return pd.read_csv(DB_FILE)
+            wb = load_workbook(ARCHIVO_EXCEL)
+            if NOMBRE_HOJA in wb.sheetnames:
+                return wb, wb[NOMBRE_HOJA]
+            ws = wb.create_sheet(NOMBRE_HOJA)
+            ws.append(ENCABEZADOS)
+            return wb, ws
         except Exception:
             pass
-    return pd.DataFrame(columns=[
-        "Fecha Salida", 
-        "Hora de Entrega",
-        "Cliente", 
-        "Guías / Facturas", 
-        "Quién Recepciona", 
-        "Conductor", 
-        "Transporte Utilizado",
-        "Fecha Registro"
-    ])
-
-# Cargar los datos actuales al iniciar la app
-df_actual = cargar_datos()
-
-# --- OBTENER LISTADO DE CLIENTES (CON FILTRADO ESTRICTO) ---
-clientes_base = [
-    "VIÑEDOS DE AGUIRRE",
-    "VIÑA CASADONOSO",
-    "VIÑA AROMO",
-    "VIÑA CASA SOLIS",
-    "VIÑA CONCHA Y TORO",
-    "VIÑA LUIS FELIPE EDWARDS",
-    "TRANSPORTES COLCHAGUA"
-]
-
-lista_clientes_completa = list(clientes_base)
-if not df_actual.empty and "Cliente" in df_actual.columns:
-    clientes_historicos = [
-        str(c).strip() for c in df_actual["Cliente"].dropna().unique() 
-        if str(c).strip() and not str(c).strip().isdigit()
-    ]
-    for c in clientes_historicos:
-        if c not in lista_clientes_completa and c != "Selecciona un cliente...":
-            lista_clientes_completa.append(c)
-
-lista_clientes_completa = sorted(lista_clientes_completa)
-lista_clientes_completa.insert(0, "Selecciona un cliente...")
-lista_clientes_completa.append("➕ Agregar Cliente Nuevo...")
+    wb = crear_libro_nuevo()
+    return wb, wb[NOMBRE_HOJA]
 
 
-# --- OBTENER LISTADO DE RECEPTORES (CON FILTRADO ESTRICTO) ---
-receptores_base = [
-    "CAMILA VILLASANA",
-    "OLGA GONZALEZ",
-    "JORGE DIAZ",
-    "JAVIERA RAMIREZ",
-    "ENCARGADO COLCHAGUA"
-]
-
-lista_receptores_completa = list(receptores_base)
-if not df_actual.empty and "Quién Recepciona" in df_actual.columns:
-    receptores_historicos = [
-        str(r).strip() for r in df_actual["Quién Recepciona"].dropna().unique() 
-        if str(r).strip() and not str(r).strip().isdigit()
-    ]
-    for r in receptores_historicos:
-        if r not in lista_receptores_completa and r != "Selecciona quién recibe...":
-            lista_receptores_completa.append(r)
-
-lista_receptores_completa = sorted(lista_receptores_completa)
-lista_receptores_completa.insert(0, "Selecciona quién recibe...")
-lista_receptores_completa.append("➕ Agregar Receptor Nuevo...")
+def guardar_filas(filas):
+    """Agrega las filas al Excel (una por guía) y reaplica el diseño."""
+    wb, ws = abrir_libro()
+    for fila in filas:
+        ws.append(fila)
+    aplicar_diseno(ws)
+    wb.save(ARCHIVO_EXCEL)
 
 
-# Función para guardar registros independientes por cada línea (guía)
-def guardar_registro(fecha_salida, cliente, guias_bloque_texto, recepciona, conductor, transporte):
-    df = cargar_datos()
-    ahora = datetime.now()
-    
-    lista_guias = [g.strip() for g in guias_bloque_texto.split("\n") if g.strip()]
-    
-    nuevas_filas = []
-    for copia_guia in lista_guias:
-        nueva_entrega = {
-            "Fecha Salida": fecha_salida.strftime("%Y-%m-%d"),
-            "Hora de Entrega": ahora.strftime("%H:%M:%S"),
-            "Cliente": str(cliente).upper(),  
-            "Guías / Facturas": copia_guia,
-            "Quién Recepciona": str(recepciona).upper(),
-            "Conductor": conductor,
-            "Transporte Utilizado": transporte,
-            "Fecha Registro": ahora.strftime("%Y-%m-%d %H:%M:%S")
-        }
-        nuevas_filas.append(nueva_entrega)
-    
-    df = pd.concat([df, pd.DataFrame(nuevas_filas)], ignore_index=True)
-    df.to_csv(DB_FILE, index=False)
+def valores_guardados(indice_columna):
+    """Lee valores únicos ya guardados en el Excel (para recordar 'nuevos' agregados antes)."""
+    valores = []
+    if not os.path.exists(ARCHIVO_EXCEL):
+        return valores
+    try:
+        wb = load_workbook(ARCHIVO_EXCEL, read_only=True)
+        if NOMBRE_HOJA not in wb.sheetnames:
+            return valores
+        ws = wb[NOMBRE_HOJA]
+        for fila in ws.iter_rows(min_row=2, values_only=True):
+            if len(fila) > indice_columna and fila[indice_columna]:
+                valor = str(fila[indice_columna]).strip()
+                if valor and valor not in valores:
+                    valores.append(valor)
+        wb.close()
+    except Exception:
+        pass
+    return valores
 
-# --- INTERFAZ DE USUARIO ---
-if logo_encontrado:
-    col_logo_1, col_logo_2, col_logo_3 = st.columns(3)
-    with col_logo_2:
-        st.image(logo_encontrado, use_container_width=True)
 
-st.title("📦 Control de Registro de Entregas")
-st.write("Complete la información detallada de la salida del producto:")
+def construir_opciones(base, extras_sesion, indice_columna, excluir=()):
+    """Une la lista base + lo guardado en el Excel + lo agregado en esta sesión."""
+    opciones = list(base)
+    for valor in valores_guardados(indice_columna) + list(extras_sesion):
+        if valor not in opciones and valor not in excluir:
+            opciones.append(valor)
+    return opciones
 
-# --- DATOS FUERA DEL FORMULARIO PARA RESPUESTA INMEDIATA ---
-fecha_salida = st.date_input("Fecha de Salida *", value=date.today())
 
-col_cond_1, col_cond_2 = st.columns(2)
-with col_cond_1:
-    conductor = st.radio(
-        "Conductor *",
-        ["Elizabeth", "Empresa Externa"],
-        index=0,
-        horizontal=True
-    )
+def cargar_tabla():
+    if not os.path.exists(ARCHIVO_EXCEL):
+        return pd.DataFrame(columns=ENCABEZADOS)
+    try:
+        wb = load_workbook(ARCHIVO_EXCEL, read_only=True)
+        ws = wb[NOMBRE_HOJA]
+        filas = list(ws.iter_rows(min_row=2, values_only=True))
+        wb.close()
+    except Exception:
+        return pd.DataFrame(columns=ENCABEZADOS)
 
-# Lógica dinámica inmediata para el transporte
-transporte_final = ""
-with col_cond_2:
-    if conductor == "Elizabeth":
-        st.info("ℹ️ Asignado: **Vehículo Interno**")
-        transporte_final = "Vehículo Interno"
-    else:
-        empresa_externa_sel = st.selectbox(
-            "Seleccione Empresa Externa *",
-            [
-                "Selecciona una empresa...",
-                "Starken", 
-                "Chilexpress", 
-                "Blue Express", 
-                "CorreosChile", 
-                "Varmontt", 
-                "Transportes Cruz del Sur", 
-                "Pullman Cargo", 
-                "TNT / FedEx", 
-                "Otra Empresa"
-            ]
+    df = pd.DataFrame(filas, columns=ENCABEZADOS)
+    if not df.empty:
+        df["Fecha de salida"] = df["Fecha de salida"].apply(
+            lambda x: x.strftime("%d/%m/%Y") if hasattr(x, "strftime") else x
         )
-        if empresa_externa_sel == "Otra Empresa":
-            transporte_final = st.text_input("Escriba el nombre de la empresa *", placeholder="Ej: Transportes Juanito...")
-        else:
-            transporte_final = empresa_externa_sel
+    return df
 
-st.divider()
 
-# --- SELECCIÓN DINÁMICA DEL CLIENTE ---
-col_cli_1, col_cli_2 = st.columns(2)
-with col_cli_1:
-    cliente_seleccionado = st.selectbox("Seleccione el Cliente *", lista_clientes_completa)
+# ----------------------------------------------------------------------
+# ESTADO DE SESIÓN
+# ----------------------------------------------------------------------
+if "clientes_extra" not in st.session_state:
+    st.session_state["clientes_extra"] = []
+if "recepcionistas_extra" not in st.session_state:
+    st.session_state["recepcionistas_extra"] = []
+if "empresas_extra" not in st.session_state:
+    st.session_state["empresas_extra"] = []
+if "mensaje" not in st.session_state:
+    st.session_state["mensaje"] = None
 
-cliente_final = ""
-with col_cli_2:
-    if cliente_seleccionado == "➕ Agregar Cliente Nuevo...":
-        cliente_final = st.text_input("Escriba el nombre del nuevo cliente *", placeholder="Ej: Nueva Viña S.A.")
-    elif cliente_seleccionado == "Selecciona un cliente...":
-        cliente_final = "Selecciona un cliente..."
+
+# ----------------------------------------------------------------------
+# LÓGICA DE GUARDADO (se ejecuta al presionar el botón)
+# ----------------------------------------------------------------------
+def guardar_registro():
+    ss = st.session_state
+
+    # Cliente
+    cliente = ss.get("cliente_sel")
+    if cliente == OPCION_NUEVO:
+        cliente = (ss.get("cliente_nuevo") or "").strip()
+
+    # Quién recepciona
+    recepciona = ss.get("recepciona_sel")
+    if recepciona == OPCION_NUEVO:
+        recepciona = (ss.get("recepciona_nuevo") or "").strip()
+
+    # Conductor y transporte
+    conductor = ss.get("conductor")
+    if conductor == "Elizabeth":
+        transporte = VEHICULO_INTERNO
     else:
-        cliente_final = cliente_seleccionado
-        st.info(f"📋 Seleccionado: **{cliente_final}**")
+        transporte = ss.get("transporte_sel")
+        if transporte == OPCION_OTRA_EMPRESA:
+            transporte = (ss.get("transporte_nuevo") or "").strip()
 
-st.divider()
+    # Guías: una por línea
+    texto_guias = ss.get("guias_texto") or ""
+    guias = [linea.strip() for linea in texto_guias.splitlines() if linea.strip()]
 
-# --- SELECCIÓN DINÁMICA DE QUIÊN RECEPCIONA ---
-col_rec_1, col_rec_2 = st.columns(2)
-with col_rec_1:
-    receptor_seleccionado = st.selectbox("Seleccione Quién Recibe *", lista_receptores_completa)
+    # Validaciones
+    errores = []
+    if not cliente:
+        errores.append("Debes indicar el cliente.")
+    if not recepciona:
+        errores.append("Debes indicar quién recepciona.")
+    if not transporte:
+        errores.append("Debes indicar la empresa de transporte.")
+    if not guias:
+        errores.append("Debes ingresar al menos una guía o factura.")
 
-receptor_final = ""
-with col_rec_2:
-    if receptor_seleccionado == "➕ Agregar Receptor Nuevo...":
-        receptor_final = st.text_input("Escriba el nombre del nuevo receptor *", placeholder="Ej: Juan Pérez")
-    elif receptor_seleccionado == "Selecciona quién recibe...":
-        receptor_final = "Selecciona quién recibe..."
-    else:
-        receptor_final = receptor_seleccionado
-        st.info(f"👤 Asignado: **{receptor_final}**")
+    if errores:
+        ss["mensaje"] = ("error", " ".join(errores))
+        return
 
-st.divider()
+    fecha_salida = ss.get("fecha_salida")
+    ahora = ahora_chile()
 
-# --- FORMULARIO RESTANTE PARA LAS GUÍAS ---
-with st.form(key="formulario_datos_entrega", clear_on_submit=True):
-    guias_facturas = st.text_area(
-        "Guías / Facturas (Escriba una por línea usando ENTER) *", 
-        placeholder="1024\n1025\n1026",
-        height=120
+    # Una fila independiente por cada guía, con su hora de entrega automática
+    filas = []
+    for guia in guias:
+        hora_entrega = ahora_chile().strftime("%H:%M:%S")
+        filas.append(
+            [fecha_salida, hora_entrega, cliente, recepciona, conductor, transporte, guia]
+        )
+
+    try:
+        guardar_filas(filas)
+    except Exception as e:
+        ss["mensaje"] = ("error", f"No se pudo guardar el Excel: {e}")
+        return
+
+    # Recordar nuevos valores en la sesión
+    if ss.get("cliente_sel") == OPCION_NUEVO and cliente not in ss["clientes_extra"]:
+        ss["clientes_extra"].append(cliente)
+    if ss.get("recepciona_sel") == OPCION_NUEVO and recepciona not in ss["recepcionistas_extra"]:
+        ss["recepcionistas_extra"].append(recepciona)
+    if (
+        conductor == "Empresa Externa"
+        and ss.get("transporte_sel") == OPCION_OTRA_EMPRESA
+        and transporte not in ss["empresas_extra"]
+    ):
+        ss["empresas_extra"].append(transporte)
+
+    # Limpiar campos para el siguiente registro
+    ss["guias_texto"] = ""
+    ss["cliente_nuevo"] = ""
+    ss["recepciona_nuevo"] = ""
+    ss["transporte_nuevo"] = ""
+    ss["cliente_sel"] = cliente
+    ss["recepciona_sel"] = recepciona
+    if conductor == "Empresa Externa":
+        ss["transporte_sel"] = transporte
+
+    plural = "guía" if len(filas) == 1 else "guías"
+    ss["mensaje"] = (
+        "ok",
+        f"Se guardaron {len(filas)} {plural} a las {ahora.strftime('%H:%M:%S')} hrs.",
     )
-    
-    st.markdown("<small>* Campos obligatorios</small>", unsafe_allow_html=True)
-    boton_guardar = st.form_submit_button(label="🚀 Registrar Entrega Completa")
 
-# Lógica de guardado y validaciones estrictas
-if boton_guardar:
-    if cliente_final == "Selecciona un cliente..." or not cliente_final.strip():
-        st.error("⚠️ Debe seleccionar un cliente válido de la lista.")
-    elif transporte_final == "Selecciona una empresa..." or not transporte_final.strip():
-        st.error("⚠️ Debe seleccionar una empresa de transporte válida para la opción Externa.")
-    elif receptor_final == "Selecciona quién recibe..." or not receptor_final.strip():
-        st.error("⚠️ Debe seleccionar quién recibe el producto de la lista.")
-    elif cliente_final and guias_facturas and receptor_final and conductor and transporte_final:
-        guardar_registro(fecha_salida, cliente_final, guias_facturas, receptor_final, conductor, transporte_final)
-        st.success("✅ ¡Entrega registrada con éxito!")
-        st.rerun()
+
+# ----------------------------------------------------------------------
+# INTERFAZ
+# ----------------------------------------------------------------------
+st.title("🚚 Registro de Entregas")
+st.caption("Completa los datos y guarda. Cada guía se registra en una fila independiente del Excel.")
+
+# Mensaje del último guardado
+if st.session_state["mensaje"]:
+    tipo, texto = st.session_state["mensaje"]
+    if tipo == "ok":
+        st.success(texto)
     else:
-        st.error("⚠️ Por favor, asegúrese de completar todos los campos obligatorios (*) antes de guardar.")
+        st.error(texto)
+    st.session_state["mensaje"] = None
 
-# --- SECCIÓN DE REPORTES (PROCESAMIENTO DE EXCEL CORREGIDO) ---
+# 1. Fecha de salida
+st.date_input("Fecha de salida", value=ahora_chile().date(), format="DD/MM/YYYY", key="fecha_salida")
+
+# 2. Cliente
+opciones_clientes = construir_opciones(
+    CLIENTES_BASE, st.session_state["clientes_extra"], indice_columna=2
+) + [OPCION_NUEVO]
+st.selectbox("Cliente", opciones_clientes, key="cliente_sel")
+if st.session_state.get("cliente_sel") == OPCION_NUEVO:
+    st.text_input("Nombre del nuevo cliente", key="cliente_nuevo")
+
+# 3. Quién recepciona
+opciones_recep = construir_opciones(
+    RECEPCIONISTAS_BASE, st.session_state["recepcionistas_extra"], indice_columna=3
+) + [OPCION_NUEVO]
+st.selectbox("Quién recepciona", opciones_recep, key="recepciona_sel")
+if st.session_state.get("recepciona_sel") == OPCION_NUEVO:
+    st.text_input("Nombre de quien recepciona", key="recepciona_nuevo")
+
+# 4. Conductor
+st.radio("Conductor", ["Elizabeth", "Empresa Externa"], horizontal=True, key="conductor")
+
+# 5. Transporte
+if st.session_state.get("conductor") == "Elizabeth":
+    st.info(f"Transporte asignado automáticamente: **{VEHICULO_INTERNO}**")
+else:
+    opciones_transporte = construir_opciones(
+        EMPRESAS_TRANSPORTE_BASE,
+        st.session_state["empresas_extra"],
+        indice_columna=5,
+        excluir=(VEHICULO_INTERNO,),
+    ) + [OPCION_OTRA_EMPRESA]
+    st.selectbox("Empresa de transporte", opciones_transporte, key="transporte_sel")
+    if st.session_state.get("transporte_sel") == OPCION_OTRA_EMPRESA:
+        st.text_input("Nombre de la otra empresa", key="transporte_nuevo")
+
+# 6. Guías / Facturas
+st.text_area(
+    "Guías / Facturas",
+    height=200,
+    placeholder="Escribe una guía por línea y presiona ENTER para la siguiente.\nEj:\n12345\n12346\n12347",
+    key="guias_texto",
+)
+
+# Contador de guías detectadas
+cantidad_guias = len([l for l in (st.session_state.get("guias_texto") or "").splitlines() if l.strip()])
+if cantidad_guias:
+    st.caption(f"Guías detectadas: {cantidad_guias}")
+
+# 7. Guardar
+st.button("💾 Guardar registro", type="primary", on_click=guardar_registro, use_container_width=True)
+
+# ----------------------------------------------------------------------
+# HISTORIAL Y DESCARGA
+# ----------------------------------------------------------------------
 st.divider()
-st.subheader("📋 Historial y Reporte en Excel")
+st.subheader("📋 Registros guardados")
 
-if not df_actual.empty:
-    st.dataframe(df_actual, use_container_width=True)
-    
-    buffer = io.BytesIO()
-    
-    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        df_actual.to_excel(writer, index=False, sheet_name='Bitácora de Despachos')
-        
-        workbook = writer.book
-        worksheet = workbook['Bitácora de Despachos']
-        
-        fuente_titulo = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
-        fuente_datos = Font(name='Calibri', size=11, bold=False, color='000000')
-        
-        relleno_titulo = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid')
-        relleno_par = PatternFill(start_color='F2F2F2', end_color='F2F2F2', fill_type='solid')
-        relleno_impar = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
-        
-        alineacion_centro = Alignment(horizontal='center', vertical='center')
-        alineacion_izquierda = Alignment(horizontal='left', vertical='center')
-        
-        borde_fino = Side(border_style="thin", color="D9D9D9")
-        cuadrícula = Border(left=borde_fino, right=borde_fino, top=borde_fino, bottom=borde_fino)
-        
-        # 1. Cabeceras estilizadas automáticamente
-        worksheet.row_dimensions.height = 25
-        for col_idx in range(1, worksheet.max_column + 1):
-            cell = worksheet.cell(row=1, column=col_idx)
-            cell.font = fuente_titulo
-            cell.fill = relleno_titulo
-            cell.alignment = alineacion_centro
+tabla = cargar_tabla()
+if tabla.empty:
+    st.write("Aún no hay registros.")
+else:
+    st.dataframe(tabla.iloc[::-1], use_container_width=True, hide_index=True)
+
+if os.path.exists(ARCHIVO_EXCEL):
+    with open(ARCHIVO_EXCEL, "rb") as f:
+        st.download_button(
+            "⬇️ Descargar Excel",
+            data=f.read(),
+            file_name="registro_entregas.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+    st.caption(
+        "⚠️ En Streamlit Cloud el archivo en el servidor se reinicia cuando la app se reinicia "
+        "o se vuelve a desplegar. Descarga el Excel con frecuencia."
+    )
