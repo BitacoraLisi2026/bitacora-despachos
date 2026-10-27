@@ -40,12 +40,9 @@ def cargar_datos():
         ])
 
 # Función para guardar un nuevo registro
-def guardar_registro(fecha_salida, cliente, lista_guias, recepciona, tipo_transporte, transporte):
+def guardar_registro(fecha_salida, cliente, guias_texto, recepciona, tipo_transporte, transporte):
     df = cargar_datos()
     ahora = datetime.now()
-    
-    # Unimos las múltiples guías con una coma para que se guarden limpias en el Excel
-    guias_texto = ", ".join(lista_guias)
     
     nueva_entrega = {
         "Fecha Salida": fecha_salida.strftime("%Y-%m-%d"),
@@ -65,7 +62,7 @@ df_actual = cargar_datos()
 
 # --- INTERFAZ DE USUARIO ---
 if logo_encontrado:
-    col_logo_1, col_logo_2, col_logo_3 = st.columns([1, 2, 1])
+    col_logo_1, col_logo_2, col_logo_3 = st.columns(3)
     with col_logo_2:
         st.image(logo_encontrado, use_container_width=True)
 
@@ -81,13 +78,10 @@ with st.form(key="formulario_entrega", clear_on_submit=True):
     with col1:
         cliente = st.text_input("Cliente *")
         
-        # CAMBIO CLAVE: Permite escribir una guía, dar Enter y escribir otra
-        guias_facturas = st.multiselect(
-            "Guías / Facturas (Escribe y presiona Enter para añadir varias) *",
-            options=[],
-            default=[],
-            placeholder="Ej: 1024, 1025, F-442",
-            st_se_label=False # Hack para que actúe como entrada libre de etiquetas
+        # SOLUCIÓN: Entrada de texto explicativa para múltiples documentos
+        guias_facturas = st.text_input(
+            "Guías / Facturas *", 
+            placeholder="Ej: 1024, 1025, F-442 (sepárelas por comas)"
         )
     
     with col2:
@@ -105,13 +99,12 @@ with st.form(key="formulario_entrega", clear_on_submit=True):
 
 # Lógica al presionar el botón de guardar
 if boton_guardar:
-    # Verificamos que al menos haya ingresado una guía/factura
     if cliente and guias_facturas and recepciona and transporte:
         guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_transporte, transporte)
         st.success("✅ ¡Entrega registrada y guardada con éxito!")
         st.rerun()
     else:
-        st.error("⚠️ Por favor, complete todos los campos obligatorios antes de enviar (asegúrese de añadir al menos una Guía/Factura).")
+        st.error("⚠️ Por favor, complete todos los campos obligatorios antes de enviar.")
 
 # --- SECCIÓN DE REPORTES ---
 st.divider()
