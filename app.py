@@ -34,13 +34,13 @@ def cargar_datos():
             "Cliente", 
             "Guías / Facturas", 
             "Quién Recepciona", 
-            "Tipo Transporte", 
+            "Conductor", 
             "Transporte Utilizado",
             "Fecha Registro"
         ])
 
 # Función para guardar registros independientes por cada línea (guía)
-def guardar_registro(fecha_salida, cliente, guias_bloque_texto, recepciona, tipo_transporte, transporte):
+def guardar_registro(fecha_salida, cliente, guias_bloque_texto, recepciona, conductor, transporte):
     df = cargar_datos()
     ahora = datetime.now()
     
@@ -56,7 +56,7 @@ def guardar_registro(fecha_salida, cliente, guias_bloque_texto, recepciona, tipo
             "Cliente": cliente,
             "Guías / Facturas": copia_guia,  # Una guía por fila hacia abajo
             "Quién Recepciona": recepciona,
-            "Tipo Transporte": tipo_transporte,
+            "Conductor": conductor,
             "Transporte Utilizado": transporte,
             "Fecha Registro": ahora.strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -87,7 +87,7 @@ with st.form(key="formulario_entrega", clear_on_submit=True):
     with col1:
         cliente = st.text_input("Cliente *")
         
-        # CAMBIO CLAVE: Cuadro grande para listar hacia abajo con ENTER
+        # Cuadro grande para listar hacia abajo con ENTER
         guias_facturas = st.text_area(
             "Guías / Facturas (Escriba una por línea usando ENTER) *", 
             placeholder="1024\n1025\n1026",
@@ -96,9 +96,12 @@ with st.form(key="formulario_entrega", clear_on_submit=True):
     
     with col2:
         recepciona = st.text_input("Quién Recepciona *")
-        tipo_transporte = st.radio(
-            "Tipo de Transporte",
-            ["Interno", "Externo"],
+        
+        # NUEVO CAMBIO: Conductor con Elizabeth por defecto
+        conductor = st.radio(
+            "Conductor *",
+            ["Elizabeth", "Empresa Externa"],
+            index=0,  # Fuerza a que 'Elizabeth' sea la opción seleccionada por defecto
             horizontal=True
         )
         
@@ -109,9 +112,9 @@ with st.form(key="formulario_entrega", clear_on_submit=True):
 
 # Lógica al presionar el botón de guardar
 if boton_guardar:
-    if cliente and guias_facturas and recepciona and transporte:
-        guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_transporte, transporte)
-        st.success("✅ ¡Entrega registrada! Las guías se guardaron en filas independientes hacia abajo.")
+    if cliente and guias_facturas and recepciona and conductor and transporte:
+        guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, conductor, transporte)
+        st.success("✅ ¡Entrega registrada! Las filas se generaron de forma independiente hacia abajo.")
         st.rerun()
     else:
         st.error("⚠️ Por favor, complete todos los campos obligatorios antes de enviar.")
