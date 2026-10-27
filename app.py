@@ -59,9 +59,29 @@ if not df_actual.empty:
 else:
     lista_clientes_completa = sorted(clientes_base)
 
-# CAMBIO CLAVE: Agregamos el texto por defecto al principio de la lista
 lista_clientes_completa.insert(0, "Selecciona un cliente...")
 lista_clientes_completa.append("➕ Agregar Cliente Nuevo...")
+
+
+# --- OBTENER LISTADO DE RECEPTORES (TU LISTA OFICIAL) ---
+receptores_base = [
+    "CAMILA VILLASANA",
+    "OLGA GONZALEZ",
+    "JORGE DIAZ",
+    "JAVIERA RAMIREZ",
+    "ENCARGADO COLCHAGUA"
+]
+
+if not df_actual.empty:
+    receptores_historicos = df_actual["Quién Recepciona"].dropna().unique().tolist()
+    lista_receptores_completa = sorted(list(set(receptores_base + receptores_historicos)))
+else:
+    lista_receptores_completa = sorted(receptores_base)
+
+# Insertamos el texto por defecto solicitado al inicio de la lista
+lista_receptores_completa.insert(0, "Selecciona quién recibe...")
+lista_receptores_completa.append("➕ Agregar Receptor Nuevo...")
+
 
 # Función para guardar registros independientes por cada línea (guía)
 def guardar_registro(fecha_salida, cliente, guias_bloque_texto, recepciona, conductor, transporte):
@@ -115,20 +135,19 @@ with col_cond_2:
         st.info("ℹ️ Asignado: **Vehículo Interno**")
         transporte_final = "Vehículo Interno"
     else:
-        # CAMBIO CLAVE: Agregamos "Selecciona una empresa..." al inicio de la lista externa
         empresa_externa_sel = st.selectbox(
             "Seleccione Empresa Externa *",
             [
                 "Selecciona una empresa...",
-                "CHILEXPRESS", 
-                "BLUE EXPRESS", 
-                "CORREOSCHILE", 
-                "VARMONTT", 
-                "TRANSPORTES CRUZ DEL SUR", 
-                "PULLMAN CARGO", 
-                "TNT / FEDEX", 
-                "OTRA EMPRESA"
-
+                "Starken", 
+                "Chilexpress", 
+                "Blue Express", 
+                "CorreosChile", 
+                "Varmontt", 
+                "Transportes Cruz del Sur", 
+                "Pullman Cargo", 
+                "TNT / FedEx", 
+                "Otra Empresa"
             ]
         )
         if empresa_externa_sel == "Otra Empresa":
@@ -153,29 +172,46 @@ with col_cli_2:
         cliente_final = cliente_seleccionado
         st.info(f"📋 Seleccionado: **{cliente_final}**")
 
+st.divider()
+
+# --- SELECCIÓN DINÁMICA DE QUIÊN RECEPCIONA ---
+col_rec_1, col_rec_2 = st.columns(2)
+with col_rec_1:
+    receptor_seleccionado = st.selectbox("Seleccione Quién Recibe *", lista_receptores_completa)
+
+receptor_final = ""
+with col_rec_2:
+    if receptor_seleccionado == "➕ Agregar Receptor Nuevo...":
+        receptor_final = st.text_input("Escriba el nombre del nuevo receptor *", placeholder="Ej: Juan Pérez")
+    elif receptor_seleccionado == "Selecciona quién recibe...":
+        receptor_final = "Selecciona quién recibe..."
+    else:
+        receptor_final = receptor_seleccionado
+        st.info(f"👤 Asignado: **{receptor_final}**")
+
+st.divider()
+
 # --- FORMULARIO RESTANTE PARA LAS GUÍAS ---
 with st.form(key="formulario_datos_entrega", clear_on_submit=True):
-    col1, col2 = st.columns(2)
-    with col1:
-        guias_facturas = st.text_area(
-            "Guías / Facturas (Escriba una por línea usando ENTER) *", 
-            placeholder="1024\n1025\n1026",
-            height=120
-        )
-    with col2:
-        recepciona = st.text_input("Quién Recepciona *")
+    guias_facturas = st.text_area(
+        "Guías / Facturas (Escriba una por línea usando ENTER) *", 
+        placeholder="1024\n1025\n1026",
+        height=120
+    )
     
     st.markdown("<small>* Campos obligatorios</small>", unsafe_allow_html=True)
     boton_guardar = st.form_submit_button(label="🚀 Registrar Entrega Completa")
 
-# Lógica al presionar el botón de guardar definitivo con validaciones estrictas
+# Lógica al presionar el botón de guardar definitivo con todas las validaciones estrictas
 if boton_guardar:
     if cliente_final == "Selecciona un cliente...":
         st.error("⚠️ Debe seleccionar un cliente válido de la lista.")
     elif transporte_final == "Selecciona una empresa...":
         st.error("⚠️ Debe seleccionar una empresa de transporte válida para la opción Externa.")
-    elif cliente_final and guias_facturas and recepciona and conductor and transporte_final:
-        guardar_registro(fecha_salida, cliente_final, guias_facturas, recepciona, conductor, transporte_final)
+    elif receptor_final == "Selecciona quién recibe...":
+        st.error("⚠️ Debe seleccionar quién recibe el producto de la lista.")
+    elif cliente_final and guias_facturas and receptor_final and conductor and transporte_final:
+        guardar_registro(fecha_salida, cliente_final, guias_facturas, receptor_final, conductor, transporte_final)
         st.success("✅ ¡Entrega registrada! Las filas se generaron correctamente hacia abajo.")
         st.rerun()
     else:
