@@ -56,6 +56,8 @@ EMPRESAS_TRANSPORTE_BASE = [
 ]
 
 OPCION_NUEVO = "➕ Agregar nuevo"
+PLACEHOLDER_CLIENTE = "Seleccione cliente..."
+PLACEHOLDER_RECEPCION = "Seleccione quién recepciona..."
 OPCION_OTRA_EMPRESA = "Otra Empresa"
 VEHICULO_INTERNO = "Vehículo Interno"
 
@@ -240,11 +242,15 @@ def guardar_registro():
     cliente = ss.get("cliente_sel")
     if cliente == OPCION_NUEVO:
         cliente = (ss.get("cliente_nuevo") or "").strip()
+    elif cliente == PLACEHOLDER_CLIENTE:
+        cliente = ""
 
     # Quién recepciona
     recepciona = ss.get("recepciona_sel")
     if recepciona == OPCION_NUEVO:
         recepciona = (ss.get("recepciona_nuevo") or "").strip()
+    elif recepciona == PLACEHOLDER_RECEPCION:
+        recepciona = ""
 
     # Conductor y transporte
     conductor = ss.get("conductor")
@@ -308,10 +314,8 @@ def guardar_registro():
     ss["cliente_nuevo"] = ""
     ss["recepciona_nuevo"] = ""
     ss["transporte_nuevo"] = ""
-    ss["cliente_sel"] = cliente
-    ss["recepciona_sel"] = recepciona
-    if conductor == "Empresa Externa":
-        ss["transporte_sel"] = transporte
+    ss["cliente_sel"] = PLACEHOLDER_CLIENTE
+    ss["recepciona_sel"] = PLACEHOLDER_RECEPCION
 
     plural = "guía" if len(filas) == 1 else "guías"
     ss["mensaje"] = (
@@ -344,17 +348,23 @@ if st.session_state["mensaje"]:
 st.date_input("Fecha de salida", value=ahora_chile().date(), format="DD/MM/YYYY", key="fecha_salida")
 
 # 2. Cliente
-opciones_clientes = construir_opciones(
-    CLIENTES_BASE, st.session_state["clientes_extra"], indice_columna=2
-) + [OPCION_NUEVO]
+opciones_clientes = (
+    [PLACEHOLDER_CLIENTE]
+    + construir_opciones(CLIENTES_BASE, st.session_state["clientes_extra"], indice_columna=2)
+    + [OPCION_NUEVO]
+)
 st.selectbox("Cliente", opciones_clientes, key="cliente_sel")
 if st.session_state.get("cliente_sel") == OPCION_NUEVO:
     st.text_input("Nombre del nuevo cliente", key="cliente_nuevo")
 
 # 3. Quién recepciona
-opciones_recep = construir_opciones(
-    RECEPCIONISTAS_BASE, st.session_state["recepcionistas_extra"], indice_columna=3
-) + [OPCION_NUEVO]
+opciones_recep = (
+    [PLACEHOLDER_RECEPCION]
+    + construir_opciones(
+        RECEPCIONISTAS_BASE, st.session_state["recepcionistas_extra"], indice_columna=3
+    )
+    + [OPCION_NUEVO]
+)
 st.selectbox("Quién recepciona", opciones_recep, key="recepciona_sel")
 if st.session_state.get("recepciona_sel") == OPCION_NUEVO:
     st.text_input("Nombre de quien recepciona", key="recepciona_nuevo")
