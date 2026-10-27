@@ -39,6 +39,32 @@ def cargar_datos():
             "Fecha Registro"
         ])
 
+# Cargar los datos actuales al iniciar la app
+df_actual = cargar_datos()
+
+# --- OBTENER LISTADO DE CLIENTES (ACTUALIZADO) ---
+# Tu lista oficial de clientes y transportes
+clientes_base = [
+    "VIÑEDOS DE AGUIRRE",
+    "VIÑA CASADONOSO",
+    "VIÑA AROMO",
+    "VIÑA CASA SOLIS",
+    "VIÑA CONCHA Y TORO",
+    "VIÑA LUIS FELIPE EDWARDS",
+    "TRANSPORTES COLCHAGUA"
+]
+
+if not df_actual.empty:
+    # Extrae los clientes que ya han sido guardados antes en el archivo CSV para no perderlos
+    clientes_historicos = df_actual["Cliente"].dropna().unique().tolist()
+    # Junta ambas listas quitando duplicados y los ordena alfabéticamente
+    lista_clientes_completa = sorted(list(set(clientes_base + clientes_historicos)))
+else:
+    lista_clientes_completa = sorted(clientes_base)
+
+# Añadimos la opción para ingresar uno completamente nuevo al final
+lista_clientes_completa.append("➕ Agregar Cliente Nuevo...")
+
 # Función para guardar registros independientes por cada línea (guía)
 def guardar_registro(fecha_salida, cliente, guias_bloque_texto, recepciona, conductor, transporte):
     df = cargar_datos()
@@ -66,17 +92,14 @@ def guardar_registro(fecha_salida, cliente, guias_bloque_texto, recepciona, cond
     df = pd.concat([df, pd.DataFrame(nuevas_filas)], ignore_index=True)
     df.to_csv(DB_FILE, index=False)
 
-# Cargar los datos actuales al iniciar la app
-df_actual = cargar_datos()
-
 # --- INTERFAZ DE USUARIO ---
 if logo_encontrado:
     col_logo_1, col_logo_2, col_logo_3 = st.columns(3)
     with col_logo_2:
         st.image(logo_encontrado, use_container_width=True)
 
-st.title("📦 BITACORA DE ENTREGAS")
-st.write("Ingresa todos los datos:")
+st.title("📦 Control de Registro de Entregas")
+st.write("Complete la información detallada de la salida del producto:")
 
 # --- DATOS FUERA DEL FORMULARIO PARA RESPUESTA INMEDIATA ---
 fecha_salida = st.date_input("Fecha de Salida *", value=date.today())
@@ -85,7 +108,7 @@ col_cond_1, col_cond_2 = st.columns(2)
 with col_cond_1:
     conductor = st.radio(
         "Conductor *",
-        ["ELIZABETH", "EMPRESA EXTERNA"],
+        ["Elizabeth", "Empresa Externa"],
         index=0,
         horizontal=True
     )
@@ -93,31 +116,48 @@ with col_cond_1:
 # Lógica dinámica inmediata para el transporte
 transporte_final = ""
 with col_cond_2:
-    if conductor == "ELIZABETH":
+    if conductor == "Elizabeth":
         st.info("ℹ️ Asignado: **Vehículo Interno**")
         transporte_final = "Vehículo Interno"
     else:
         empresa_externa_sel = st.selectbox(
             "Seleccione Empresa Externa *",
             [
-                "TRANSPORTES COLCHAGUA",
-                "STARKEN", 
-                "CHILEXPRESS", 
-                "BLUE EXPRESS", 
-                "CORREOS", 
-                "OTRA EMPRESA"
+                "Starken", 
+                "Chilexpress", 
+                "Blue Express", 
+                "CorreosChile", 
+                "Varmontt", 
+                "Transportes Cruz del Sur", 
+                "Pullman Cargo", 
+                "TNT / FedEx", 
+                "Otra Empresa"
             ]
         )
-        if empresa_externa_sel == "OTRA EMPRESA":
+        if empresa_externa_sel == "Otra Empresa":
             transporte_final = st.text_input("Escriba el nombre de la empresa *", placeholder="Ej: Transportes Juanito...")
         else:
             transporte_final = empresa_externa_sel
 
-# --- FORMULARIO RESTANTE PARA EL ENVÍO ---
+st.divider()
+
+# --- SELECCIÓN DINÁMICA DEL CLIENTE ---
+col_cli_1, col_cli_2 = st.columns(2)
+with col_cli_1:
+    cliente_seleccionado = st.selectbox("Seleccione el Cliente *", lista_clientes_completa)
+
+cliente_final = ""
+with col_cli_2:
+    if cliente_seleccionado == "➕ Agregar Cliente Nuevo...":
+        cliente_final = st.text_input("Escriba el nombre del nuevo cliente *", placeholder="Ej: Nueva Viña S.A.")
+    else:
+        cliente_final = cliente_seleccionado
+        st.info(f"📋 Seleccionado: **{cliente_final}**")
+
+# --- FORMULARIO RESTANTE PARA LAS GUÍAS ---
 with st.form(key="formulario_datos_entrega", clear_on_submit=True):
     col1, col2 = st.columns(2)
     with col1:
-        cliente = st.text_input("Cliente *")
         guias_facturas = st.text_area(
             "Guías / Facturas (Escriba una por línea usando ENTER) *", 
             placeholder="1024\n1025\n1026",
@@ -131,8 +171,8 @@ with st.form(key="formulario_datos_entrega", clear_on_submit=True):
 
 # Lógica al presionar el botón de guardar definitivo
 if boton_guardar:
-    if cliente and guias_facturas and recepciona and conductor and transporte_final:
-        guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, conductor, transporte_final)
+    if cliente_final and guias_facturas and recepciona and conductor and transporte_final:
+        guardar_registro(fecha_salida, cliente_final, guias_facturas, recepciona, conductor, transporte_final)
         st.success("✅ ¡Entrega registrada! Las filas se generaron correctamente hacia abajo.")
         st.rerun()
     else:
