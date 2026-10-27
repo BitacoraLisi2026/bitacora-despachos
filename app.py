@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime, date, time
+from datetime import datetime, date
 import io
 
 # Configuración de la página y el navegador
@@ -12,7 +12,6 @@ st.set_page_config(
 )
 
 # --- CONFIGURACIÓN DEL LOGO ---
-# Busca el logo en la raíz con las extensiones más comunes
 NOMBRES_LOGO = ["logo.png", "logo.jpg", "logo.jpeg"]
 logo_encontrado = None
 
@@ -31,28 +30,31 @@ def cargar_datos():
     else:
         return pd.DataFrame(columns=[
             "Fecha Salida", 
+            "Hora de Entrega",
             "Cliente", 
             "Guías / Facturas", 
             "Quién Recepciona", 
             "Tipo Transporte", 
             "Transporte Utilizado",
-            "Hora de Entrega",
             "Fecha Registro"
         ])
 
 # Función para guardar un nuevo registro
-def guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_transporte, transporte, hora_entrega):
+def guardar_registro(fecha_salida, cliente, lista_guias, recepciona, tipo_transporte, transporte):
     df = cargar_datos()
     ahora = datetime.now()
     
+    # Unimos las múltiples guías con una coma para que se guarden limpias en el Excel
+    guias_texto = ", ".join(lista_guias)
+    
     nueva_entrega = {
         "Fecha Salida": fecha_salida.strftime("%Y-%m-%d"),
+        "Hora de Entrega": ahora.strftime("%H:%M:%S"),
         "Cliente": cliente,
-        "Guías / Facturas": guias_facturas,
+        "Guías / Facturas": guias_texto,
         "Quién Recepciona": recepciona,
         "Tipo Transporte": tipo_transporte,
         "Transporte Utilizado": transporte,
-        "Hora de Entrega": hora_entrega.strftime("%H:%M"),
         "Fecha Registro": ahora.strftime("%Y-%m-%d %H:%M:%S")
     }
     df = pd.concat([df, pd.DataFrame([nueva_entrega])], ignore_index=True)
@@ -62,7 +64,6 @@ def guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_tra
 df_actual = cargar_datos()
 
 # --- INTERFAZ DE USUARIO ---
-# Muestra el logo centrado si existe en la carpeta
 if logo_encontrado:
     col_logo_1, col_logo_2, col_logo_3 = st.columns([1, 2, 1])
     with col_logo_2:
@@ -74,51 +75,55 @@ st.write("Complete la información detallada de la salida del producto:")
 # Formulario de entrada de datos
 with st.form(key="formulario_entrega", clear_on_submit=True):
     
-    # Campo de fecha
     fecha_salida = st.date_input("Fecha de Salida *", value=date.today())
     
     col1, col2 = st.columns(2)
     with col1:
         cliente = st.text_input("Cliente *")
-        guias_facturas = st.text_input("Número de Guías / Facturas *")
-        transporte = st.text_input("¿Qué transporte utilizó? *", placeholder="Ej: Camión Propio N°2, Starken...")
+        
+        # CAMBIO CLAVE: Permite escribir una guía, dar Enter y escribir otra
+        guias_facturas = st.multiselect(
+            "Guías / Facturas (Escribe y presiona Enter para añadir varias) *",
+            options=[],
+            default=[],
+            placeholder="Ej: 1024, 1025, F-442",
+            st_se_label=False # Hack para que actúe como entrada libre de etiquetas
+        )
     
     with col2:
         recepciona = st.text_input("Quién Recepciona *")
-        # Nuevo campo para ingresar la hora de entrega manualmente
-        hora_entrega = st.time_input("Hora de Entrega *", value=datetime.now().time())
         tipo_transporte = st.radio(
             "Tipo de Transporte",
             ["Interno", "Externo"],
             horizontal=True
         )
+        
+    transporte = st.text_input("¿Qué transporte utilizó? *", placeholder="Ej: Camión Propio N°2, Starken, Chilexpress...")
     
     st.markdown("<small>* Campos obligatorios</small>", unsafe_allow_html=True)
     boton_guardar = st.form_submit_button(label="Registrar Entrega")
 
 # Lógica al presionar el botón de guardar
 if boton_guardar:
+    # Verificamos que al menos haya ingresado una guía/factura
     if cliente and guias_facturas and recepciona and transporte:
-        guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_transporte, transporte, hora_entrega)
+        guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_transporte, transporte)
         st.success("✅ ¡Entrega registrada y guardada con éxito!")
         st.rerun()
     else:
-        st.error("⚠️ Por favor, complete todos los campos obligatorios antes de enviar.")
+        st.error("⚠️ Por favor, complete todos los campos obligatorios antes de enviar (asegúrese de añadir al menos una Guía/Factura).")
 
 # --- SECCIÓN DE REPORTES ---
 st.divider()
 st.subheader("📋 Historial y Reporte en Excel")
 
 if not df_actual.empty:
-    # Mostrar tabla con los datos actuales ordenados por el último registro
     st.dataframe(df_actual, use_container_width=True)
     
-    # Generar el archivo Excel en memoria utilizando OpenPyXL
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
         df_actual.to_excel(writer, index=False, sheet_name='Historial de Entregas')
     
-    # Botón de descarga directa
     st.download_button(
         label="📥 Descargar Reporte en Excel (.xlsx)",
         data=buffer.getvalue(),
