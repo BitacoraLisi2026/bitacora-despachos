@@ -24,7 +24,7 @@ def cargar_datos():
             "Cliente", 
             "Guías / Facturas", 
             "Quién Recepciona", 
-            "Hora de entrega
+            "Hora de entrega",
             "Tipo Transporte", 
             "Transporte Utilizado",
             "Fecha Registro"
