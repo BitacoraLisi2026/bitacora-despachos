@@ -54,7 +54,7 @@ def guardar_registro(fecha_salida, cliente, guias_bloque_texto, recepciona, cond
             "Fecha Salida": fecha_salida.strftime("%Y-%m-%d"),
             "Hora de Entrega": ahora.strftime("%H:%M:%S"),
             "Cliente": cliente,
-            "Guías / Facturas": copia_guia,  # Una guía por fila hacia abajo
+            "Guías / Facturas": copia_guia,
             "Quién Recepciona": recepciona,
             "Conductor": conductor,
             "Transporte Utilizado": transporte,
@@ -97,27 +97,52 @@ with st.form(key="formulario_entrega", clear_on_submit=True):
     with col2:
         recepciona = st.text_input("Quién Recepciona *")
         
-        # NUEVO CAMBIO: Conductor con Elizabeth por defecto
+        # Conductor con Elizabeth por defecto
         conductor = st.radio(
             "Conductor *",
             ["Elizabeth", "Empresa Externa"],
-            index=0,  # Fuerza a que 'Elizabeth' sea la opción seleccionada por defecto
+            index=0,
             horizontal=True
         )
         
-    transporte = st.text_input("¿Qué transporte utilizó? *", placeholder="Ej: Camión Propio N°2, Starken, Chilexpress...")
+    st.divider()
+    st.write("🚚 **Detalle del Transporte**")
     
-    st.markdown("<small>* Campos obligatorios</small>", unsafe_allow_html=True)
+    # --- LÓGICA DINÁMICA DE TRANSPORTE ---
+    transporte_final = ""
+    
+    if conductor == "Elizabeth":
+        # Se autocompleta e informa al usuario de manera fija
+        st.info("ℹ️ Transporte asignado automáticamente: **Vehículo Interno**")
+        transporte_final = "Vehículo Interno"
+    else:
+        # Abre el abanico de opciones dinámicas para empresas externas
+        col_trans_1, col_trans_2 = st.columns(2)
+        with col_trans_1:
+            empresa_externa_sel = st.selectbox(
+                "Seleccione Empresa Externa *",
+                ["Starken", "Chilexpress", "CorreosChile", "Blue Express", "Otra Empresa"]
+            )
+        
+        with col_trans_2:
+            if empresa_externa_sel == "Otra Empresa":
+                # Si no está en la lista, permite escribirla manualmente
+                transporte_final = st.text_input("Escriba el nombre de la empresa *", placeholder="Ej: Fedex, Transportes X...")
+            else:
+                transporte_final = empresa_externa_sel
+
+    st.markdown("<br><small>* Campos obligatorios</small>", unsafe_allow_html=True)
     boton_guardar = st.form_submit_button(label="Registrar Entrega")
 
 # Lógica al presionar el botón de guardar
 if boton_guardar:
-    if cliente and guias_facturas and recepciona and conductor and transporte:
-        guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, conductor, transporte)
-        st.success("✅ ¡Entrega registrada! Las filas se generaron de forma independiente hacia abajo.")
+    # Validamos que todos los campos requeridos y dinámicos contengan información
+    if cliente and guias_facturas and recepciona and conductor and transporte_final:
+        guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, conductor, transporte_final)
+        st.success("✅ ¡Entrega registrada con éxito! Las filas se generaron de forma independiente hacia abajo.")
         st.rerun()
     else:
-        st.error("⚠️ Por favor, complete todos los campos obligatorios antes de enviar.")
+        st.error("⚠️ Por favor, complete todos los campos obligatorios antes de enviar (asegúrese de especificar la empresa de transporte si seleccionó 'Otra Empresa').")
 
 # --- SECCIÓN DE REPORTES ---
 st.divider()
