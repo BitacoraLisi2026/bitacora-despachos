@@ -269,24 +269,4 @@ if not df_actual.empty:
                 columnas_centradas = (1, 2, 4, 6, 8)
                 if col_idx in columnas_centradas:
                     cell.alignment = alineacion_centro
-else:
-cell.alignment = alineacion_izquierda
-for col in worksheet.columns:
-max_len = 0
-col_letter = get_column_letter(col.column)
-for cell in col:
-try:
-if cell.value:
-max_len = max(max_len, len(str(cell.value)))
-except:
-pass
-worksheet.column_dimensions[col_letter].width = max(max_len + 4, 12)
-st.download_button(
-label="📥 Descargar Reporte en Excel (.xlsx)",
-data=buffer.getvalue(),
-file_name=f"reporte_entregas_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
-mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
-else:
-st.info("Aún no se han registrado entregas en el sistema.")
 
