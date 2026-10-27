@@ -177,7 +177,7 @@ with col_cli_2:
 
 st.divider()
 
-# --- SELECCIÓN DINÁMICA DE QUIÉN RECEPCIONA ---
+# --- SELECCIÓN DINÁMICA DE QUIÊN RECEPCIONA ---
 col_rec_1, col_rec_2 = st.columns(2)
 with col_rec_1:
     receptor_seleccionado = st.selectbox("Seleccione Quién Recibe *", lista_receptores_completa)
@@ -220,7 +220,7 @@ if boton_guardar:
     else:
         st.error("⚠️ Por favor, asegúrese de completar todos los campos obligatorios (*) antes de guardar.")
 
-# --- SECCIÓN DE REPORTES (DISEÑO ELEGANTE INTEGRADO) ---
+# --- SECCIÓN DE REPORTES ---
 st.divider()
 st.subheader("📋 Historial y Reporte en Excel")
 
@@ -254,7 +254,8 @@ if not df_actual.empty:
         
         # 1. Diseñar la fila del título (Cabecera)
         worksheet.row_dimensions[1].height = 25  # Hacer la cabecera más alta
-        for cell in worksheet[1]:
+        for col_idx in range(1, worksheet.max_column + 1):
+            cell = worksheet.cell(row=1, column=col_idx)
             cell.font = fuente_titulo
             cell.fill = relleno_titulo
             cell.alignment = alineacion_centro
@@ -266,4 +267,3 @@ if not df_actual.empty:
             
             # Decidir color intercalado (Zebra)
             relleno_actual = relleno_par if row_idx % 2 == 0 else relleno_impar
-            
