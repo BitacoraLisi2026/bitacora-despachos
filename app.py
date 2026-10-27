@@ -23,10 +23,6 @@ for nombre in NOMBRES_LOGO:
 # Nombre del archivo de base de datos local
 DB_FILE = "registro_entregas.csv"
 
-# Inicializar la lista temporal de guías en la sesión si no existe
-if "lista_guias_temporal" not in st.session_state:
-    st.session_state.lista_guias_temporal = []
-
 # Función para cargar los datos existentes sin perder el formato
 def cargar_datos():
     if os.path.exists(DB_FILE):
@@ -43,25 +39,31 @@ def cargar_datos():
             "Fecha Registro"
         ])
 
-# Función para guardar un nuevo registro
-def guardar_registro(fecha_salida, cliente, guias_lista, recepciona, tipo_transporte, transporte):
+# Función para guardar registros independientes por cada guía
+def guardar_registro(fecha_salida, cliente, guias_texto, recepciona, tipo_transporte, transporte):
     df = cargar_datos()
     ahora = datetime.now()
     
-    # Juntamos todas las guías de la lista en un solo texto separado por comas para la fila de Excel
-    guias_consolidadas = ", ".join(guias_lista)
+    # Separamos el texto por comas y limpiamos los espacios en blanco de cada guía
+    lista_guias = [g.strip() for g in guias_texto.split(",") if g.strip()]
     
-    nueva_entrega = {
-        "Fecha Salida": fecha_salida.strftime("%Y-%m-%d"),
-        "Hora de Entrega": ahora.strftime("%H:%M:%S"),
-        "Cliente": cliente,
-        "Guías / Facturas": guias_consolidadas,
-        "Quién Recepciona": recepciona,
-        "Tipo Transporte": tipo_transporte,
-        "Transporte Utilizado": transporte,
-        "Fecha Registro": ahora.strftime("%Y-%m-%d %H:%M:%S")
-    }
-    df = pd.concat([df, pd.DataFrame([nueva_entrega])], ignore_index=True)
+    # Creamos una lista de diccionarios (una fila para cada guía)
+    nuevas_filas = []
+    for guia in lista_guias:
+        nueva_entrega = {
+            "Fecha Salida": fecha_salida.strftime("%Y-%m-%d"),
+            "Hora de Entrega": ahora.strftime("%H:%M:%S"),
+            "Cliente": cliente,
+            "Guías / Facturas": guia,  # <- Aquí va una sola guía por fila
+            "Quién Recepciona": recepciona,
+            "Tipo Transporte": tipo_transporte,
+            "Transporte Utilizado": transporte,
+            "Fecha Registro": ahora.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        nuevas_filas.append(nueva_entrega)
+    
+    # Concatenamos todas las nuevas filas creadas hacia abajo
+    df = pd.concat([df, pd.DataFrame(nuevas_filas)], ignore_index=True)
     df.to_csv(DB_FILE, index=False)
 
 # Cargar los datos actuales al iniciar la app
@@ -76,42 +78,20 @@ if logo_encontrado:
 st.title("📦 Control de Registro de Entregas")
 st.write("Complete la información detallada de la salida del producto:")
 
-# --- BLOQUE DE AGREGAR GUÍAS (HACIA ABAJO) ---
-st.subheader("📝 Agregar Guías o Facturas")
-col_input, col_btn = st.columns([3, 1])
-
-with col_input:
-    nueva_guia = st.text_input("Ingrese número de Guía / Factura", key="input_guia_individual", placeholder="Ej: 1024")
-
-with col_btn:
-    st.write("") # Espacio para alinear el botón
-    st.write("") 
-    if st.button("➕ Añadir", use_container_width=True):
-        if nueva_guia.strip():
-            st.session_state.lista_guias_temporal.append(nueva_guia.strip())
-            st.rerun()
-
-# Mostrar la lista de guías agregadas hacia abajo
-if st.session_state.lista_guias_temporal:
-    st.write("**Guías añadidas para este despacho:**")
-    for i, g in enumerate(st.session_state.lista_guias_temporal):
-        st.markdown(f" * Guía N°: **{g}**")
+# Formulario de entrada de datos original
+with st.form(key="formulario_entrega", clear_on_submit=True):
     
-    if st.button("🗑️ Limpiar lista de guías"):
-        st.session_state.lista_guias_temporal = []
-        st.rerun()
-else:
-    st.info("Aún no has agregado guías para esta entrega. Usa el campo de arriba.")
-
-st.divider()
-
-# --- FORMULARIO PRINCIPAL DE ENVÍO ---
-with st.form(key="formulario_entrega_final"):
     fecha_salida = st.date_input("Fecha de Salida *", value=date.today())
     
     col1, col2 = st.columns(2)
     with col1:
         cliente = st.text_input("Cliente *")
+        
+        # El usuario ingresa las guías separadas por comas de forma simple
+        guias_facturas = st.text_input(
+            "Guías / Facturas *", 
+            placeholder="Ej: 1024, 1025, 1026"
+        )
     
     with col2:
         recepciona = st.text_input("Quién Recepciona *")
@@ -124,22 +104,16 @@ with st.form(key="formulario_entrega_final"):
     transporte = st.text_input("¿Qué transporte utilizó? *", placeholder="Ej: Camión Propio N°2, Starken, Chilexpress...")
     
     st.markdown("<small>* Campos obligatorios</small>", unsafe_allow_html=True)
-    boton_guardar = st.form_submit_button(label="🚀 Registrar Entrega Completa")
+    boton_guardar = st.form_submit_button(label="Registrar Entrega")
 
-# Lógica al presionar el botón de guardar definitivo
+# Lógica al presionar el botón de guardar
 if boton_guardar:
-    if not st.session_state.lista_guias_temporal:
-        st.error("⚠️ Debe añadir al menos una guía en la sección de arriba antes de registrar la entrega.")
-    elif cliente and recepciona and transporte:
-        # Guardamos pasando la lista acumulada
-        guardar_registro(fecha_salida, cliente, st.session_state.lista_guias_temporal, recepciona, tipo_transporte, transporte)
-        
-        # Limpiamos la lista temporal para la siguiente entrega
-        st.session_state.lista_guias_temporal = []
-        st.success("✅ ¡Entrega registrada con éxito en una sola fila!")
+    if cliente and guias_facturas and recepciona and transporte:
+        guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_transporte, transporte)
+        st.success("✅ ¡Entrega registrada! Las guías se han desglosado en filas independientes.")
         st.rerun()
     else:
-        st.error("⚠️ Por favor, complete todos los campos obligatorios (*).")
+        st.error("⚠️ Por favor, complete todos los campos obligatorios antes de enviar.")
 
 # --- SECCIÓN DE REPORTES ---
 st.divider()
