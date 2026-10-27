@@ -11,6 +11,16 @@ st.set_page_config(
     layout="centered"
 )
 
+# --- CONFIGURACIÓN DEL LOGO ---
+# Busca el logo en la raíz con las extensiones más comunes
+NOMBRES_LOGO = ["logo.png", "logo.jpg", "logo.jpeg"]
+logo_encontrado = None
+
+for nombre in NOMBRES_LOGO:
+    if os.path.exists(nombre):
+        logo_encontrado = nombre
+        break
+
 # Nombre del archivo de base de datos local
 DB_FILE = "registro_entregas.csv"
 
@@ -52,6 +62,12 @@ def guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_tra
 df_actual = cargar_datos()
 
 # --- INTERFAZ DE USUARIO ---
+# Muestra el logo centrado si existe en la carpeta
+if logo_encontrado:
+    col_logo_1, col_logo_2, col_logo_3 = st.columns([1, 2, 1])
+    with col_logo_2:
+        st.image(logo_encontrado, use_container_width=True)
+
 st.title("📦 Control de Registro de Entregas")
 st.write("Complete la información detallada de la salida del producto:")
 
