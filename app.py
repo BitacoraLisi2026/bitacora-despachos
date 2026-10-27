@@ -42,10 +42,8 @@ def cargar_datos():
 # Cargar los datos actuales al iniciar la app
 df_actual = cargar_datos()
 
-# --- OBTENER LISTADO DE CLIENTES (ACTUALIZADO) ---
-# Tu lista oficial de clientes y transportes
+# --- OBTENER LISTADO DE CLIENTES ---
 clientes_base = [
-    "Selecciona un cliente...",
     "VIÑEDOS DE AGUIRRE",
     "VIÑA CASADONOSO",
     "VIÑA AROMO",
@@ -56,14 +54,13 @@ clientes_base = [
 ]
 
 if not df_actual.empty:
-    # Extrae los clientes que ya han sido guardados antes en el archivo CSV para no perderlos
     clientes_historicos = df_actual["Cliente"].dropna().unique().tolist()
-    # Junta ambas listas quitando duplicados y los ordena alfabéticamente
     lista_clientes_completa = sorted(list(set(clientes_base + clientes_historicos)))
 else:
     lista_clientes_completa = sorted(clientes_base)
 
-# Añadimos la opción para ingresar uno completamente nuevo al final
+# CAMBIO CLAVE: Agregamos el texto por defecto al principio de la lista
+lista_clientes_completa.insert(0, "Selecciona un cliente...")
 lista_clientes_completa.append("➕ Agregar Cliente Nuevo...")
 
 # Función para guardar registros independientes por cada línea (guía)
@@ -71,10 +68,8 @@ def guardar_registro(fecha_salida, cliente, guias_bloque_texto, recepciona, cond
     df = cargar_datos()
     ahora = datetime.now()
     
-    # Separamos el bloque de texto por saltos de línea y limpiamos espacios vacíos
     lista_guias = [g.strip() for g in guias_bloque_texto.split("\n") if g.strip()]
     
-    # Creamos una fila independiente en el Excel por cada línea escrita
     nuevas_filas = []
     for copia_guia in lista_guias:
         nueva_entrega = {
@@ -89,7 +84,6 @@ def guardar_registro(fecha_salida, cliente, guias_bloque_texto, recepciona, cond
         }
         nuevas_filas.append(nueva_entrega)
     
-    # Concatenamos las filas al registro general
     df = pd.concat([df, pd.DataFrame(nuevas_filas)], ignore_index=True)
     df.to_csv(DB_FILE, index=False)
 
@@ -121,15 +115,20 @@ with col_cond_2:
         st.info("ℹ️ Asignado: **Vehículo Interno**")
         transporte_final = "Vehículo Interno"
     else:
+        # CAMBIO CLAVE: Agregamos "Selecciona una empresa..." al inicio de la lista externa
         empresa_externa_sel = st.selectbox(
             "Seleccione Empresa Externa *",
             [
-                 "OTRO EXTERNO",
-                 "COLCHAGUA",
-                 "CHILEXPRESS",           
-                 "STARKEN",              
-                 "FEDDEX",                
-                 "BLUE EXPRESS"        
+                "Selecciona una empresa...",
+                "CHILEXPRESS", 
+                "BLUE EXPRESS", 
+                "CORREOSCHILE", 
+                "VARMONTT", 
+                "TRANSPORTES CRUZ DEL SUR", 
+                "PULLMAN CARGO", 
+                "TNT / FEDEX", 
+                "OTRA EMPRESA"
+
             ]
         )
         if empresa_externa_sel == "Otra Empresa":
@@ -148,6 +147,8 @@ cliente_final = ""
 with col_cli_2:
     if cliente_seleccionado == "➕ Agregar Cliente Nuevo...":
         cliente_final = st.text_input("Escriba el nombre del nuevo cliente *", placeholder="Ej: Nueva Viña S.A.")
+    elif cliente_seleccionado == "Selecciona un cliente...":
+        cliente_final = "Selecciona un cliente..."
     else:
         cliente_final = cliente_seleccionado
         st.info(f"📋 Seleccionado: **{cliente_final}**")
@@ -167,9 +168,13 @@ with st.form(key="formulario_datos_entrega", clear_on_submit=True):
     st.markdown("<small>* Campos obligatorios</small>", unsafe_allow_html=True)
     boton_guardar = st.form_submit_button(label="🚀 Registrar Entrega Completa")
 
-# Lógica al presionar el botón de guardar definitivo
+# Lógica al presionar el botón de guardar definitivo con validaciones estrictas
 if boton_guardar:
-    if cliente_final and guias_facturas and recepciona and conductor and transporte_final:
+    if cliente_final == "Selecciona un cliente...":
+        st.error("⚠️ Debe seleccionar un cliente válido de la lista.")
+    elif transporte_final == "Selecciona una empresa...":
+        st.error("⚠️ Debe seleccionar una empresa de transporte válida para la opción Externa.")
+    elif cliente_final and guias_facturas and recepciona and conductor and transporte_final:
         guardar_registro(fecha_salida, cliente_final, guias_facturas, recepciona, conductor, transporte_final)
         st.success("✅ ¡Entrega registrada! Las filas se generaron correctamente hacia abajo.")
         st.rerun()
