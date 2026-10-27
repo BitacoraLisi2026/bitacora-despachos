@@ -123,15 +123,12 @@ with col_cond_2:
         empresa_externa_sel = st.selectbox(
             "Seleccione Empresa Externa *",
             [
-                "Starken", 
-                "Chilexpress", 
-                "Blue Express", 
-                "CorreosChile", 
-                "Varmontt", 
-                "Transportes Cruz del Sur", 
-                "Pullman Cargo", 
-                "TNT / FedEx", 
-                "Otra Empresa"
+                 "OTRO EXTERNO",
+                 "COLCHAGUA",
+                 "CHILEXPRESS",           
+                 "STARKEN",              
+                 "FEDDEX",                
+                 "BLUE EXPRESS"        
             ]
         )
         if empresa_externa_sel == "Otra Empresa":
