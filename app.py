@@ -75,8 +75,8 @@ if logo_encontrado:
     with col_logo_2:
         st.image(logo_encontrado, use_container_width=True)
 
-st.title("📦 Control de Registro de Entregas")
-st.write("Complete la información detallada de la salida del producto:")
+st.title("📦 BITACORA DE ENTREGAS")
+st.write("Ingresa todos los datos:")
 
 # --- DATOS FUERA DEL FORMULARIO PARA RESPUESTA INMEDIATA ---
 fecha_salida = st.date_input("Fecha de Salida *", value=date.today())
