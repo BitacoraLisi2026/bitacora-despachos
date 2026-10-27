@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime, date
+from datetime import datetime, date, time
 import io
 
 # Configuración de la página y el navegador
@@ -36,12 +36,12 @@ def cargar_datos():
             "Quién Recepciona", 
             "Tipo Transporte", 
             "Transporte Utilizado",
-            "Hora de entrega",
+            "Hora de Entrega",
             "Fecha Registro"
         ])
 
 # Función para guardar un nuevo registro
-def guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_transporte, transporte):
+def guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_transporte, transporte, hora_entrega):
     df = cargar_datos()
     ahora = datetime.now()
     
@@ -52,7 +52,7 @@ def guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_tra
         "Quién Recepciona": recepciona,
         "Tipo Transporte": tipo_transporte,
         "Transporte Utilizado": transporte,
-        "Hora de entrega": ahora.strftime("%H:%M:%S"),
+        "Hora de Entrega": hora_entrega.strftime("%H:%M"),
         "Fecha Registro": ahora.strftime("%Y-%m-%d %H:%M:%S")
     }
     df = pd.concat([df, pd.DataFrame([nueva_entrega])], ignore_index=True)
@@ -81,16 +81,17 @@ with st.form(key="formulario_entrega", clear_on_submit=True):
     with col1:
         cliente = st.text_input("Cliente *")
         guias_facturas = st.text_input("Número de Guías / Facturas *")
+        transporte = st.text_input("¿Qué transporte utilizó? *", placeholder="Ej: Camión Propio N°2, Starken...")
     
     with col2:
         recepciona = st.text_input("Quién Recepciona *")
+        # Nuevo campo para ingresar la hora de entrega manualmente
+        hora_entrega = st.time_input("Hora de Entrega *", value=datetime.now().time())
         tipo_transporte = st.radio(
             "Tipo de Transporte",
             ["Interno", "Externo"],
             horizontal=True
         )
-        
-    transporte = st.text_input("¿Qué transporte utilizó? *", placeholder="Ej: Camión Propio N°2, Starken, Chilexpress...")
     
     st.markdown("<small>* Campos obligatorios</small>", unsafe_allow_html=True)
     boton_guardar = st.form_submit_button(label="Registrar Entrega")
@@ -98,7 +99,7 @@ with st.form(key="formulario_entrega", clear_on_submit=True):
 # Lógica al presionar el botón de guardar
 if boton_guardar:
     if cliente and guias_facturas and recepciona and transporte:
-        guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_transporte, transporte)
+        guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_transporte, transporte, hora_entrega)
         st.success("✅ ¡Entrega registrada y guardada con éxito!")
         st.rerun()
     else:
