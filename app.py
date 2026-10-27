@@ -4,6 +4,10 @@ import os
 from datetime import datetime, date
 import io
 
+# Importaciones para el diseño elegante de Excel
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+
 # Configuración de la página y el navegador
 st.set_page_config(
     page_title="Control de Entregas", 
@@ -63,7 +67,7 @@ lista_clientes_completa.insert(0, "Selecciona un cliente...")
 lista_clientes_completa.append("➕ Agregar Cliente Nuevo...")
 
 
-# --- OBTENER LISTADO DE RECEPTORES (TU LISTA OFICIAL) ---
+# --- OBTENER LISTADO DE RECEPTORES ---
 receptores_base = [
     "CAMILA VILLASANA",
     "OLGA GONZALEZ",
@@ -78,7 +82,6 @@ if not df_actual.empty:
 else:
     lista_receptores_completa = sorted(receptores_base)
 
-# Insertamos el texto por defecto solicitado al inicio de la lista
 lista_receptores_completa.insert(0, "Selecciona quién recibe...")
 lista_receptores_completa.append("➕ Agregar Receptor Nuevo...")
 
@@ -174,7 +177,7 @@ with col_cli_2:
 
 st.divider()
 
-# --- SELECCIÓN DINÁMICA DE QUIÊN RECEPCIONA ---
+# --- SELECCIÓN DINÁMICA DE QUIÉN RECEPCIONA ---
 col_rec_1, col_rec_2 = st.columns(2)
 with col_rec_1:
     receptor_seleccionado = st.selectbox("Seleccione Quién Recibe *", lista_receptores_completa)
@@ -217,7 +220,7 @@ if boton_guardar:
     else:
         st.error("⚠️ Por favor, asegúrese de completar todos los campos obligatorios (*) antes de guardar.")
 
-# --- SECCIÓN DE REPORTES ---
+# --- SECCIÓN DE REPORTES (DISEÑO ELEGANTE INTEGRADO) ---
 st.divider()
 st.subheader("📋 Historial y Reporte en Excel")
 
@@ -226,13 +229,41 @@ if not df_actual.empty:
     
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        df_actual.to_excel(writer, index=False, sheet_name='Historial de Entregas')
-    
-    st.download_button(
-        label="📥 Descargar Reporte en Excel (.xlsx)",
-        data=buffer.getvalue(),
-        file_name=f"reporte_entregas_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-else:
-    st.info("Aún no se han registrado entregas en el sistema.")
+        df_actual.to_excel(writer, index=False, sheet_name='Bitácora de Despachos')
+        
+        # Obtener acceso a la hoja de cálculo generada para aplicar estilos directos
+        workbook = writer.book
+        worksheet = workbook['Bitácora de Despachos']
+        
+        # --- DEFINICIÓN DE ESTILOS ---
+        fuente_titulo = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
+        fuente_datos = Font(name='Calibri', size=11, bold=False, color='000000')
+        
+        # Azul Corporativo para Cabecera y Gris Claro para filas intercaladas
+        relleno_titulo = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid')
+        relleno_par = PatternFill(start_color='F2F2F2', end_color='F2F2F2', fill_type='solid')
+        relleno_impar = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
+        
+        # Alineaciones fijas
+        alineacion_centro = Alignment(horizontal='center', vertical='center')
+        alineacion_izquierda = Alignment(horizontal='left', vertical='center')
+        
+        # Bordes finos y limpios
+        borde_fino = Side(border_style="thin", color="D9D9D9")
+        cuadrícula = Border(left=borde_fino, right=borde_fino, top=borde_fino, bottom=borde_fino)
+        
+        # 1. Diseñar la fila del título (Cabecera)
+        worksheet.row_dimensions[1].height = 25  # Hacer la cabecera más alta
+        for cell in worksheet[1]:
+            cell.font = fuente_titulo
+            cell.fill = relleno_titulo
+            cell.alignment = alineacion_centro
+            cell.border = cuadrícula
+            
+        # 2. Diseñar las filas de datos hacia abajo
+        for row_idx in range(2, worksheet.max_row + 1):
+            worksheet.row_dimensions[row_idx].height = 18  # Altura de celda cómoda
+            
+            # Decidir color intercalado (Zebra)
+            relleno_actual = relleno_par if row_idx % 2 == 0 else relleno_impar
+            
