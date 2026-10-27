@@ -24,24 +24,26 @@ def cargar_datos():
             "Cliente", 
             "Guías / Facturas", 
             "Quién Recepciona", 
-            "Hora de entrega",
             "Tipo Transporte", 
             "Transporte Utilizado",
+            "Hora de entrega",
             "Fecha Registro"
         ])
 
 # Función para guardar un nuevo registro
 def guardar_registro(fecha_salida, cliente, guias_facturas, recepciona, tipo_transporte, transporte):
     df = cargar_datos()
+    ahora = datetime.now()
+    
     nueva_entrega = {
         "Fecha Salida": fecha_salida.strftime("%Y-%m-%d"),
         "Cliente": cliente,
         "Guías / Facturas": guias_facturas,
         "Quién Recepciona": recepciona,
-        "Hora de entrega": entrega,
         "Tipo Transporte": tipo_transporte,
         "Transporte Utilizado": transporte,
-        "Fecha Registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        "Hora de entrega": ahora.strftime("%H:%M:%S"),
+        "Fecha Registro": ahora.strftime("%Y-%m-%d %H:%M:%S")
     }
     df = pd.concat([df, pd.DataFrame([nueva_entrega])], ignore_index=True)
     df.to_csv(DB_FILE, index=False)
@@ -108,4 +110,3 @@ if not df_actual.empty:
     )
 else:
     st.info("Aún no se han registrado entregas en el sistema.")
-
