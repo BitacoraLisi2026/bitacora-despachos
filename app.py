@@ -85,7 +85,7 @@ col_cond_1, col_cond_2 = st.columns(2)
 with col_cond_1:
     conductor = st.radio(
         "Conductor *",
-        ["Elizabeth", "Empresa Externa"],
+        ["ELIZABETH", "EMPRESA EXTERNA"],
         index=0,
         horizontal=True
     )
@@ -93,25 +93,22 @@ with col_cond_1:
 # Lógica dinámica inmediata para el transporte
 transporte_final = ""
 with col_cond_2:
-    if conductor == "Elizabeth":
+    if conductor == "ELIZABETH":
         st.info("ℹ️ Asignado: **Vehículo Interno**")
         transporte_final = "Vehículo Interno"
     else:
         empresa_externa_sel = st.selectbox(
             "Seleccione Empresa Externa *",
             [
-                "Starken", 
-                "Chilexpress", 
-                "Blue Express", 
-                "CorreosChile", 
-                "Varmontt", 
-                "Transportes Cruz del Sur", 
-                "Pullman Cargo", 
-                "TNT / FedEx", 
-                "Otra Empresa"
+                "TRANSPORTES COLCHAGUA",
+                "STARKEN", 
+                "CHILEXPRESS", 
+                "BLUE EXPRESS", 
+                "CORREOS", 
+                "OTRA EMPRESA"
             ]
         )
-        if empresa_externa_sel == "Otra Empresa":
+        if empresa_externa_sel == "OTRA EMPRESA":
             transporte_final = st.text_input("Escriba el nombre de la empresa *", placeholder="Ej: Transportes Juanito...")
         else:
             transporte_final = empresa_externa_sel
