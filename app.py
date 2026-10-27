@@ -267,3 +267,33 @@ if not df_actual.empty:
             
             # Decidir color intercalado (Zebra)
             relleno_actual = relleno_par if row_idx % 2 == 0 else relleno_impar
+
+for col_idx in range(1, worksheet.max_column + 1):
+cell = worksheet.cell(row=row_idx, column=col_idx)
+cell.font = fuente_datos
+cell.fill = relleno_actual
+cell.border = cuadrícula
+# Alinear columnas fijas al centro; el resto a la izquierda
+if col_idx in:
+cell.alignment = alineacion_centro
+else:
+cell.alignment = alineacion_izquierda
+# 3. Autoajustar el ancho de las columnas de forma inteligente + margen de holgura
+for col in worksheet.columns:
+max_len = 0
+col_letter = get_column_letter(col.column)
+for cell in col:
+try:
+if cell.value:
+max_len = max(max_len, len(str(cell.value)))
+except:
+pass
+worksheet.column_dimensions[col_letter].width = max(max_len + 4, 12)
+st.download_button(
+label="📥 Descargar Reporte en Excel (.xlsx)",
+data=buffer.getvalue(),
+file_name=f"reporte_entregas_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+else:
+st.info("Aún no se han registrado entregas en el sistema.")
