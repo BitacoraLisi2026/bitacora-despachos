@@ -50,6 +50,16 @@ CLIENTES_BASE = [
     "Viña Concha y Toro",
     "Viña Luis Felipe Edwards",
     "Transportes Colchagua",
+    "Viña Kinast",
+    "Viña Santa Alicia",
+    "Viña Nuevo Mundo",
+    "Molinet Impresores",
+    "Viña Casas Patronales",
+    "Folias Doña Cornelia",
+    "Viña Araucano",
+    "Viña Casas del Toqui",
+    "Viña Top Wine"
+
 ]
 
 RECEPCIONISTAS_BASE = [
@@ -58,6 +68,16 @@ RECEPCIONISTAS_BASE = [
     "Jorge Diaz",
     "Javiera Ramirez",
     "Encargado Colchagua",
+    "Eliza De Aguirre",
+    "Robinson Navarro",
+    "Juan Sandoval",
+    "Anselmo Bravo",
+    "Leonardo Berrios",
+    "Angel Manqui",
+    "Juan Reyes",
+    "Alexander Beltrán",
+    "Ana Sanchez"
+    
 ]
 
 EMPRESAS_TRANSPORTE_BASE = [
