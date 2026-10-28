@@ -50,16 +50,6 @@ CLIENTES_BASE = [
     "Viña Concha y Toro",
     "Viña Luis Felipe Edwards",
     "Transportes Colchagua",
-    "Viña Kinast",
-    "Viña Santa Alicia",
-    "Viña Nuevo Mundo",
-    "Molinet Impresores",
-    "Viña Casas Patronales",
-    "Folias Doña Cornelia",
-    "Viña Araucano",
-    "Viña Casas del Toqui",
-    "Viña Top Wine"
-
 ]
 
 RECEPCIONISTAS_BASE = [
@@ -68,16 +58,6 @@ RECEPCIONISTAS_BASE = [
     "Jorge Diaz",
     "Javiera Ramirez",
     "Encargado Colchagua",
-    "Eliza De Aguirre",
-    "Robinson Navarro",
-    "Juan Sandoval",
-    "Anselmo Bravo",
-    "Leonardo Berrios",
-    "Angel Manqui",
-    "Juan Reyes",
-    "Alexander Beltrán",
-    "Ana Sanchez"
-    
 ]
 
 EMPRESAS_TRANSPORTE_BASE = [
@@ -519,7 +499,10 @@ def guardar_registro():
     # Una fila independiente por cada guía, con su hora de entrega automática
     filas = []
     for guia in guias:
-        hora_entrega = ahora_chile().strftime("%H:%M:%S")
+        if ss.get("hora_manual_activa") and ss.get("hora_manual"):
+            hora_entrega = ss["hora_manual"].strftime("%H:%M:%S")
+        else:
+            hora_entrega = ahora_chile().strftime("%H:%M:%S")
         filas.append(
             [fecha_salida, hora_entrega, cliente, recepciona, conductor, transporte, guia]
         )
@@ -547,6 +530,7 @@ def guardar_registro():
     ss["cliente_nuevo"] = ""
     ss["recepciona_nuevo"] = ""
     ss["transporte_nuevo"] = ""
+    ss["hora_manual_activa"] = False
     ss["cliente_sel"] = PLACEHOLDER_CLIENTE
     ss["recepciona_sel"] = PLACEHOLDER_RECEPCION
 
@@ -618,6 +602,18 @@ else:
     st.selectbox("Empresa de transporte", opciones_transporte, key="transporte_sel")
     if st.session_state.get("transporte_sel") == OPCION_OTRA_EMPRESA:
         st.text_input("Nombre de la otra empresa", key="transporte_nuevo")
+
+# Hora de entrega: automática por defecto, o manual si se activa
+st.checkbox("Ingresar hora de entrega manualmente", key="hora_manual_activa")
+if st.session_state.get("hora_manual_activa"):
+    st.time_input(
+        "Hora de entrega",
+        value=ahora_chile().time().replace(second=0, microsecond=0),
+        step=60,
+        key="hora_manual",
+    )
+else:
+    st.caption("La hora de entrega se registrará automáticamente al guardar.")
 
 # 6. Guías / Facturas
 st.text_area(
