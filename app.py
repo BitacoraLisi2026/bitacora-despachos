@@ -69,7 +69,6 @@ CLIENTES_BASE = [
     "Viña De Martino",
     "Viña Aquitania",
     "Viña Pérez Cruz",
-    "Viña Haras de Pirque"
     "Viña Concha y Toro",
     "Viña Santa Rita",
     "Viña Undurraga",
