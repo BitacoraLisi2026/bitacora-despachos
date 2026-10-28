@@ -50,23 +50,76 @@ CLIENTES_BASE = [
     "Viña Concha y Toro",
     "Viña Luis Felipe Edwards",
     "Transportes Colchagua",
+    "Viña Kinast",
+    "Viña Santa Alicia",
+    "Viña Nuevo Mundo",
+    "Molinet Impresores",
+    "Viña Casas Patronales",
+    "Folias Doña Cornelia",
+    "Viña Araucano",
+    "Viña Casas del Toqui",
+    "Viña Top Wine",
+    "Viña San Pedro", 
+    "Viña Concha y Toro",
+    "Viña Santa Rita",
+    "Viña Undurraga",
+    "Viña Almaviva",
+    "Viña Cousiño Macul",
+    "Viña Tarapacá",
+    "Viña De Martino",
+    "Viña Aquitania",
+    "Viña Pérez Cruz",
+    "Viña Haras de Pirque"
+    "Viña Concha y Toro",
+    "Viña Santa Rita",
+    "Viña Undurraga",
+    "Viña Almaviva",
+    "Viña Cousiño Macul",
+    "Viña Tarapacá",
+    "Viña De Martino",
+    "Viña Aquitania",
+    "Viña Pérez Cruz",
+    "Viña Haras de Pirque",
+    "Viña Montes",
+    "Viña Viu Manent"
+    "Viña Clos Apalta,
+    "Viña Santa Cruz",
+    "Viña Casa Silva",
+    "Viña Lapostolle",
+    "Viña Neyen",
+    "Viña Koyle",
+    "Viña Los Vascos",
+    "Viña Laura Hartwig"
+
+
 ]
 
 RECEPCIONISTAS_BASE = [
     "Camila Villasana",
-    "Olga Gonzalez",
-    "Jorge Diaz",
-    "Javiera Ramirez",
+    "Olga Gonzales",
     "Encargado Colchagua",
+    "Eliza De Aguirre",
+    "Javier Diaz",
+    "Robinson Navarro",
+    "Juan Sandoval",
+    "Anselmo Bravo",
+    "Leonardo Barrios",
+    "Angel Marqui",
+    "Juan Reyes",
+    "Alexander Beltrán",
+    "Ana Sanchez",
+    "Retiro Materiales"
+   
 ]
 
 EMPRESAS_TRANSPORTE_BASE = [
+    "Transportes Colchagua",
     "Starken",
     "Chilexpress",
     "Correos de Chile",
     "Blue Express",
     "Turbus Cargo",
-    "Pullman Cargo",
+    "Pullman Cargo"
 ]
 
 OPCION_NUEVO = "➕ Agregar nuevo"
