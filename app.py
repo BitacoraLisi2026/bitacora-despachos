@@ -81,8 +81,8 @@ CLIENTES_BASE = [
     "Viña Pérez Cruz",
     "Viña Haras de Pirque",
     "Viña Montes",
-    "Viña Viu Manent"
-    "Viña Clos Apalta,
+    "Viña Viu Manent",
+    "Viña Clos Apalta",
     "Viña Santa Cruz",
     "Viña Casa Silva",
     "Viña Lapostolle",
