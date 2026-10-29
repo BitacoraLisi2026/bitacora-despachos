@@ -104,6 +104,8 @@ RECEPCIONISTAS_BASE = [
     "Juan Reyes",
     "Alexander Beltrán",
     "Ana Sanchez",
+    "Johan Garcia",
+    "Mónica Ureta",
     "Retiro Materiales"
    
 ]
